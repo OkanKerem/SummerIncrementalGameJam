@@ -1,43 +1,55 @@
-# Parallel Universes — Idle Clicker
+# Parallel Universes — Prototype
 
-A jam-scoped idle/clicker game built in Unity 6 (2D URP). Create universes, harvest stardust, grow stars and planets, manage entropy, and collapse into black holes to earn Universe DNA for permanent upgrades.
+Minimal clicker prototype: click a star, earn Stardust, age the star, trigger a Supernova, create a new star.
 
-## How to Play
+## Prototype step 2 — passive + upgrades
 
-1. Open the project in **Unity 6000.0.57f1** (or compatible Unity 6).
-2. Open `Assets/Scenes/SampleScene.unity`.
-3. Press **Play**.
-4. Click **Big Bang** to start your universe.
-5. **Click stars** to collect stardust (ages stars faster — risk/reward).
-6. **Create Star** / **Create Planet** to grow production.
-7. Watch **Entropy** rise; slow it with stardust or let it reach 100% for collapse.
-8. **Collapse Universe** manually for DNA (early collapse = penalty).
-9. Spend **Universe DNA** on upgrades, then pick a **parallel universe variant** for the next run.
+- **Passive:** star produces Stardust every second (Yellow +1, Orange +3, Red Giant +8) + upgrade bonus
+- Each passive tick also **ages the star** (+1 base, reduced by Star Stability)
+- **Upgrades** (persist across new stars): Click Power, Passive Production, Star Stability, Supernova Bonus
 
-### Controls
+### Existing scene
 
-- **Left-click** star: harvest stardust
-- **Right-drag**: pan camera
-- **Scroll wheel**: zoom
+Run **Universes → Add Prototype Step 2 UI To Open Scene** to add the upgrade panel without rebuilding.
 
-## Optional Editor Setup
+### Setup (Editor)
 
-For persistent ScriptableObject assets and prefabs in the project (instead of runtime generation):
+Use the Unity menu — everything is created **in the scene** so you can edit it in the Hierarchy/Inspector:
 
-**Universes → Setup Game (Full)** in the Unity menu bar.
+| Menu | What it does |
+|------|----------------|
+| **Universes → Create Prototype Star Prefab** | Creates `Star.prefab` once (skipped if it already exists) |
 
-This creates `Assets/Scenes/Game.unity`, balance assets, upgrade definitions, variants, and prefabs.
+| **Universes → Setup Prototype Scene** | New `PrototypeScene.unity` with all objects wired |
+| **Universes → Setup Prototype In Open Scene** | Adds prototype objects to the scene you have open |
 
-## Architecture
+Edit **`Assets/Prefabs/Prototype/Star.prefab`** for glow size, sprites, collider, pop settings — runtime code reads those values and does not overwrite them.
 
-- **Run state** (resets each collapse): stardust, stars, planets, entropy, run stats
-- **Prestige state** (persists): Universe DNA, upgrade levels, chosen variant
-- **Save file**: `%USERPROFILE%/AppData/LocalLow/DefaultCompany/universes/universes_save.json`
+Scene setup creates:
 
-## Core Loop
+- `Main Camera` — orthographic, dark space background
+- `WorldRoot` — parent for spawned stars
+- `PrototypeGame` — `PrototypeGameController` (star prefab + world root assigned)
+- `Canvas` — HUD with stardust, stage, feedback, Create New Star button
+- `EventSystem`
+- `Assets/Prefabs/Prototype/Star.prefab` — star sprite + collider
 
-```
-Big Bang → Click/Harvest → Grow Stars & Planets → Manage Entropy → Collapse → DNA → Upgrades → Pick Variant → Repeat
-```
+After setup, tweak positions, colors, costs, etc. in the Inspector, then press **Play**.
 
-*"Every universe dies, but its best traits live on in the next one."*
+## Play loop
+
+1. Click the star → Stardust + age
+2. Star changes color: Yellow → Orange → Red Giant
+3. Age 100 → Supernova (+50 bonus), star destroyed
+4. **Create New Star** (20 Stardust) → new yellow star
+
+| Age | Stage | Click reward |
+|-----|-------|--------------|
+| 0–33 | Yellow | +1 |
+| 34–66 | Orange | +3 |
+| 67–99 | Red Giant | +8 |
+| 100 | Supernova | +50 bonus |
+
+## Full game
+
+The full incremental game is under `Assets/Scripts/` — use **Universes → Setup Game (Full)** for that.
