@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0601a85ed724e1e82bf0c3fb1699676, type: 3}
+  m_Name: stable
+  m_EditorClassIdentifier: 
+  id: stable
+  displayName: Stable Universe
+  bonusDescription: -25% Entropy growth
+  drawbackDescription: -20% Stardust production
+  stardustMultiplier: 0.8
+  entropyMultiplier: 0.75
+  lifeChanceMultiplier: 1
+  starLifespanMultiplier: 1
+  dnaMultiplier: 1

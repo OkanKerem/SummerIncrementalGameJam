@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0601a85ed724e1e82bf0c3fb1699676, type: 3}
+  m_Name: life_rich
+  m_EditorClassIdentifier: 
+  id: life_rich
+  displayName: Life-Rich Universe
+  bonusDescription: +50% life development chance
+  drawbackDescription: -20% star lifespan
+  stardustMultiplier: 1
+  entropyMultiplier: 1
+  lifeChanceMultiplier: 1.5
+  starLifespanMultiplier: 0.8
+  dnaMultiplier: 1
