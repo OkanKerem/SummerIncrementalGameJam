@@ -118,7 +118,18 @@ namespace Universes.Prototype
             _particles.Add(particle);
         }
 
-        public void SpawnDnaFragment(Vector3 worldPosition)
+        public void SpawnDnaFragment(Vector3 worldPosition) =>
+            SpawnDnaParticle(worldPosition, 0f);
+
+        public void SpawnDnaPotential(Vector3 worldPosition, float amount)
+        {
+            if (amount <= 0f)
+                return;
+
+            SpawnDnaParticle(worldPosition, amount);
+        }
+
+        private void SpawnDnaParticle(Vector3 worldPosition, float potentialAmount)
         {
             var prefab = dnaParticlePrefab != null ? dnaParticlePrefab : stardustParticlePrefab;
             if (prefab == null)
@@ -128,8 +139,8 @@ namespace Universes.Prototype
             }
 
             var particle = Instantiate(prefab, transform);
-            particle.name = "DnaParticle";
-            particle.InitDna(this, worldPosition);
+            particle.name = potentialAmount > 0f ? "DnaPotentialParticle" : "DnaParticle";
+            particle.InitDna(this, worldPosition, potentialAmount);
             _particles.Add(particle);
         }
 
@@ -146,6 +157,13 @@ namespace Universes.Prototype
         {
             _particles.RemoveAll(p => p == null);
             controller?.CreditDnaFragment();
+        }
+
+        public void OnDnaPotentialCollected(float amount)
+        {
+            _particles.RemoveAll(p => p == null);
+            controller?.AddDnaPotential(amount);
+            controller?.NotifyDnaPotentialGained();
         }
 
         public void OnParticleConsumedByBlackHole(PrototypeWorldParticle particle, Transform blackHole)

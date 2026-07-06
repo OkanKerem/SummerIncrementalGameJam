@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2662309edde8dd54a9284917b3756be8, type: 3}
+  m_Name: PlanetTypeCatalog
+  m_EditorClassIdentifier: 
+  planetTypes:
+  - {fileID: 11400000, guid: 510e1f4e95ff27f40894b303499827ec, type: 2}
+  - {fileID: 11400000, guid: 6a0a470dd69690a4ca3f2fcc95345e60, type: 2}
+  - {fileID: 11400000, guid: 0980aadf6899f094eb0103b0dafc0db4, type: 2}
+  - {fileID: 11400000, guid: ff5bdb73f6fec8c4e9d94dcd343016bd, type: 2}
+  - {fileID: 11400000, guid: a5fb8ecf375a15245a081047a7eb979b, type: 2}
+  - {fileID: 11400000, guid: 2466f95ce046fe8488c57e80f2d353ef, type: 2}
+  - {fileID: 11400000, guid: 51c481d5872b40d42af30b821666b16c, type: 2}
+  - {fileID: 11400000, guid: 19a202aec6bf07146a6ccaaa40003c9d, type: 2}
+  - {fileID: 11400000, guid: 344df6974d6427c4b8f196d6afce2b40, type: 2}

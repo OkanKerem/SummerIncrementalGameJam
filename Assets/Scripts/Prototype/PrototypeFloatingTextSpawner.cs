@@ -9,13 +9,18 @@ namespace Universes.Prototype
         [SerializeField] private Font font;
         [SerializeField] private int fontSize = 26;
 
-        public void Spawn(Vector3 worldPosition, int amount, PrototypeStarStage stage)
+        public void Spawn(Vector3 worldPosition, int amount, PrototypeStarStage stage) =>
+            Spawn(worldPosition, amount, PrototypeStarColors.GetStageColor(stage));
+
+        public void Spawn(Vector3 worldPosition, int amount, Color color)
         {
             if (canvas == null)
                 canvas = GetComponentInParent<Canvas>();
 
             if (canvas == null)
                 return;
+
+            color.a = 1f;
 
             var go = new GameObject("FloatingStardust");
             var rect = go.AddComponent<RectTransform>();
@@ -28,9 +33,6 @@ namespace Universes.Prototype
             text.fontStyle = FontStyle.Bold;
             text.alignment = TextAnchor.MiddleCenter;
             text.raycastTarget = false;
-
-            var color = PrototypeStarColors.GetStageColor(stage);
-            color.a = 1f;
             text.color = color;
 
             var floater = go.AddComponent<PrototypeFloatingText>();

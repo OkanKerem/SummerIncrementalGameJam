@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1a35ab70568f044fa06ceb54b40141b, type: 3}
+  m_Name: ocean
+  m_EditorClassIdentifier: 
+  planetType: 1
+  displayName: Ocean Planet
+  description: Lower Stardust, high habitability and life chance.
+  baseClickValue: 2
+  habitability: 0.85
+  dnaChance: 0.15
+  maxDurability: 90
+  canCivilize: 1
+  spawnWeight: 14
+  planetSprite: {fileID: 21300000, guid: 5c7b6fcdc51c1ec4eb1e4d66c3943700, type: 3}
+  planetColor: {r: 1, g: 1, b: 1, a: 1}
+  lifeTintColor: {r: 0.35, g: 0.95, b: 0.55, a: 1}
+  civilizationTintColor: {r: 1, g: 0.85, b: 0.35, a: 1}
+  visualScale: 0.5
+  sortingOrder: 5
+  spawnEffectPrefab: {fileID: 4772634663558126228, guid: e1385af346f4e624eb313ec1ea4fcd7e, type: 3}
+  clickEffectPrefab: {fileID: 0}
+  destroyEffectPrefab: {fileID: 5940529053743077331, guid: 7c6d9bb9c8994364dbe5ba2e32dd4d13, type: 3}
+  effectTint: {r: 0.06505875, g: 0.1598019, b: 0.8113208, a: 1}

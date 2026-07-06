@@ -27,10 +27,13 @@ namespace Universes.Prototype
         private float _ageFraction;
 
         public int StarAge { get; private set; }
-        public PrototypeStarStage Stage => PrototypeStarStageUtility.FromAge(StarAge);
-        public bool IsInteractable => StarAge < 100 && !_supernovaStarted && _inputEnabled;
+        public int MaxStarAge { get; private set; } = 100;
+        public bool HasReachedMaxAge => StarAge >= MaxStarAge;
+        public PrototypeStarStage Stage => PrototypeStarStageUtility.FromAge(StarAge, MaxStarAge);
+        public bool IsInteractable => StarAge < MaxStarAge && !_supernovaStarted && _inputEnabled;
 
         private bool _inputEnabled = true;
+        private bool _driftEnabled = true;
         private Vector2 _driftVelocity;
 
         private void Awake()
@@ -69,6 +72,8 @@ namespace Universes.Prototype
             RefreshVisual();
         }
 
+        public void ConfigureMaxAge(int maxAge) => MaxStarAge = Mathf.Max(1, maxAge);
+
         public void SetInputEnabled(bool enabled)
         {
             _inputEnabled = enabled;
@@ -81,28 +86,30 @@ namespace Universes.Prototype
             var amount = baseAmount * stabilityMultiplier;
             _ageFraction += amount;
 
-            while (_ageFraction >= 1f && StarAge < 100)
+            while (_ageFraction >= 1f && StarAge < MaxStarAge)
             {
                 _ageFraction -= 1f;
                 StarAge++;
             }
 
-            if (StarAge >= 100)
+            if (StarAge >= MaxStarAge)
             {
-                StarAge = 100;
+                StarAge = MaxStarAge;
                 _ageFraction = 0f;
             }
         }
 
         public void SetAge(int age)
         {
-            StarAge = Mathf.Clamp(age, 0, 100);
+            StarAge = Mathf.Clamp(age, 0, MaxStarAge);
             _ageFraction = 0f;
         }
 
+        public void SetDriftEnabled(bool enabled) => _driftEnabled = enabled;
+
         public void TickDrift(float deltaTime, Vector2 minBounds, Vector2 maxBounds)
         {
-            if (!IsInteractable)
+            if (!IsInteractable || !_driftEnabled)
                 return;
 
             var pos = transform.position;

@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4e7f2a83c1d9e5647089fab2c3d5e61, type: 3}
+  m_Name: expand_universe
+  m_EditorClassIdentifier: 
+  upgradeType: 10
+  displayName: Expand Universe
+  description: 'Unlock Step 2: drift through a wider cosmos with many stars, entropy,
+    particle collection, black holes, and universe collapse.'
+  baseCost: 500
+  costScale: 1
+  maxLevel: 1

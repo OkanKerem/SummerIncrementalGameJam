@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Universes.Prototype
 {
     public enum PrototypeStarStage
@@ -10,11 +12,14 @@ namespace Universes.Prototype
 
     public static class PrototypeStarStageUtility
     {
-        public static PrototypeStarStage FromAge(int age)
+        public static PrototypeStarStage FromAge(int age, int maxAge = 100)
         {
-            if (age >= 100) return PrototypeStarStage.Supernova;
-            if (age >= 67) return PrototypeStarStage.RedGiant;
-            if (age >= 34) return PrototypeStarStage.Orange;
+            maxAge = Mathf.Max(1, maxAge);
+            if (age >= maxAge) return PrototypeStarStage.Supernova;
+
+            var ratio = (float)age / maxAge;
+            if (ratio >= 0.67f) return PrototypeStarStage.RedGiant;
+            if (ratio >= 0.34f) return PrototypeStarStage.Orange;
             return PrototypeStarStage.Yellow;
         }
 

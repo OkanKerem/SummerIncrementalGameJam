@@ -16,12 +16,14 @@ namespace Universes.Prototype
         [SerializeField] private Text blackHoleStatusText;
         [SerializeField] private Slider entropySlider;
         [SerializeField] private Image entropyFillImage;
+        [SerializeField] private GameObject entropyPanelRoot;
         [SerializeField] private RectTransform stardustCollector;
         [SerializeField] private RectTransform dnaCollector;
         [SerializeField] private Button createStarButton;
         [SerializeField] private Text createStarButtonText;
         [SerializeField] private Button collapseUniverseButton;
         [SerializeField] private PrototypeCollapsePanel collapsePanel;
+        [SerializeField] private PrototypeStarSystemEndPanel starSystemEndPanel;
 
         private float _feedbackTimer;
         private Canvas _canvas;
@@ -33,6 +35,9 @@ namespace Universes.Prototype
 
             if (collapsePanel == null)
                 collapsePanel = FindAnyObjectByType<PrototypeCollapsePanel>(FindObjectsInactive.Include);
+
+            if (starSystemEndPanel == null)
+                starSystemEndPanel = FindAnyObjectByType<PrototypeStarSystemEndPanel>(FindObjectsInactive.Include);
 
             _canvas = GetComponent<Canvas>();
 
@@ -49,29 +54,69 @@ namespace Universes.Prototype
             if (particleManager != null)
                 ConfigureParticleManager(particleManager);
 
-            createStarButton?.onClick.AddListener(() => controller.TryCreateNewStar());
+            var planetManager = controller.PlanetManager;
+            if (planetManager != null)
+                planetManager.OnCivilizationAdvanced += OnCivilizationAdvanced;
+
+            createStarButton?.onClick.AddListener(OnPrimaryActionClicked);
             collapseUniverseButton?.onClick.AddListener(() => controller.TryCollapseUniverse());
 
             controller.OnStateChanged += Refresh;
             controller.OnStardustGained += _ => Refresh();
             controller.OnDnaGained += Refresh;
             controller.OnEntropyChanged += _ => RefreshEntropy();
-            controller.OnSupernova += () => ShowMessage($"SUPERNOVA! +{controller.GetSupernovaBonus()} bonus");
+            controller.OnSupernova += () => ShowMessage($"SUPERNOVA!");
             controller.OnStarCollision += () => ShowMessage("STAR COLLISION!");
             controller.OnBlackHoleSpawned += () => ShowMessage("BLACK HOLE formed!");
             controller.OnUniverseCollapsed += OnUniverseCollapsed;
+            controller.OnStarSystemEnded += OnStarSystemEnded;
+            controller.OnExpansionFeedback += ShowMessage;
             controller.Prestige.OnChanged += Refresh;
 
+            ApplyModeVisibility();
             Refresh();
+        }
+
+        private void OnCivilizationAdvanced(PrototypePlanet planet, PrototypeCivilizationStage stage)
+        {
+            if (planet == null)
+                return;
+
+            var planetName = PrototypePlanetTypeUtility.GetLabel(planet.Definition);
+            var stageName = PrototypeCivilizationUtility.GetLabel(stage);
+            ShowMessage($"{planetName}: {stageName}!");
+        }
+
+        private void OnPrimaryActionClicked()
+        {
+            if (controller == null)
+                return;
+
+            if (controller.IsSingleStarMode)
+                controller.TryCreatePlanet();
+            else
+                controller.TryCreateNewStar();
         }
 
         private void OnUniverseCollapsed(bool manualCollapse)
         {
+            if (controller.IsSingleStarMode)
+                return;
+
             Refresh();
             if (collapsePanel == null)
                 collapsePanel = FindAnyObjectByType<PrototypeCollapsePanel>(FindObjectsInactive.Include);
 
             collapsePanel?.Show(manualCollapse);
+        }
+
+        private void OnStarSystemEnded()
+        {
+            Refresh();
+            if (starSystemEndPanel == null)
+                starSystemEndPanel = FindAnyObjectByType<PrototypeStarSystemEndPanel>(FindObjectsInactive.Include);
+
+            starSystemEndPanel?.Show();
         }
 
         public void ConfigureParticleManager(PrototypeCosmicParticleManager particleManager)
@@ -91,6 +136,24 @@ namespace Universes.Prototype
             particleManager.Configure(stardustCollector, dnaCollector, _canvas, Camera.main);
         }
 
+        private void ApplyModeVisibility()
+        {
+            if (controller == null)
+                return;
+
+            var single = controller.IsSingleStarMode;
+            if (entropyPanelRoot != null)
+                entropyPanelRoot.SetActive(!single);
+            else if (entropyText != null)
+                entropyText.transform.parent?.gameObject.SetActive(!single);
+
+            if (collapseUniverseButton != null)
+                collapseUniverseButton.gameObject.SetActive(!single);
+
+            if (blackHoleStatusText != null && single)
+                blackHoleStatusText.text = string.Empty;
+        }
+
         private void Update()
         {
             if (_feedbackTimer > 0f)
@@ -101,7 +164,8 @@ namespace Universes.Prototype
             }
 
             RefreshStatsLive();
-            RefreshBlackHoleStatus();
+            if (!controller.IsSingleStarMode)
+                RefreshBlackHoleStatus();
         }
 
         private void Refresh()
@@ -113,20 +177,25 @@ namespace Universes.Prototype
                 stardustText.text = $"Stardust: {controller.Stardust:0}";
 
             if (dnaText != null)
-                dnaText.text = $"DNA Fragments: {controller.DnaFragments}";
+            {
+                dnaText.text = controller.IsSingleStarMode
+                    ? $"DNA Potential: {controller.DnaPotential:0}"
+                    : $"DNA Fragments: {controller.DnaFragments}";
+            }
 
             if (universeDnaText != null)
                 universeDnaText.text = $"Universe DNA: {controller.Prestige.UniverseDna:0}";
 
-            RefreshEntropy();
+            if (!controller.IsSingleStarMode)
+                RefreshEntropy();
+
             RefreshStatsLive();
-            RefreshBlackHoleStatus();
             RefreshButtons();
         }
 
         private void RefreshEntropy()
         {
-            if (controller == null)
+            if (controller == null || controller.IsSingleStarMode)
                 return;
 
             var entropy = controller.Entropy;
@@ -148,7 +217,7 @@ namespace Universes.Prototype
 
         private void RefreshBlackHoleStatus()
         {
-            if (blackHoleStatusText == null || controller == null)
+            if (blackHoleStatusText == null || controller == null || controller.IsSingleStarMode)
                 return;
 
             if (controller.ActiveBlackHoleCount > 0)
@@ -170,16 +239,51 @@ namespace Universes.Prototype
             if (controller == null)
                 return;
 
-            var canPlay = !controller.IsCollapsed;
+            var canPlay = !controller.IsRunEnded;
 
             if (createStarButton != null)
-                createStarButton.interactable = canPlay && controller.Stardust >= PrototypeGameController.CreateStarCost;
+            {
+                if (controller.IsSingleStarMode)
+                {
+                    var manager = controller.PlanetManager;
+                    var max = manager != null && manager.IsInitialized
+                        ? manager.GetMaxPlanets()
+                        : PrototypePlanetBalance.BaseMaxPlanets;
+                    var count = manager != null && manager.IsInitialized
+                        ? manager.PlanetCount
+                        : 0;
+                    var hasSlot = count < max;
+                    var createCost = manager != null && manager.IsInitialized
+                        ? manager.GetCreatePlanetCost()
+                        : controller.SingleStarBalance.createPlanetCost;
+                    createStarButton.interactable = canPlay && hasSlot &&
+                                                    controller.Stardust >= createCost;
+                }
+                else
+                {
+                    createStarButton.interactable = canPlay &&
+                                                    controller.Stardust >= PrototypeGameController.CreateStarCost;
+                }
+            }
 
             if (createStarButtonText != null)
-                createStarButtonText.text = $"Create New Star ({PrototypeGameController.CreateStarCost})";
+            {
+                if (controller.IsSingleStarMode)
+                {
+                    var planetManager = controller.PlanetManager;
+                    var createCost = planetManager != null && planetManager.IsInitialized
+                        ? planetManager.GetCreatePlanetCost()
+                        : controller.SingleStarBalance.createPlanetCost;
+                    createStarButtonText.text = $"Create Planet ({createCost:0})";
+                }
+                else
+                {
+                    createStarButtonText.text = $"Create New Star ({PrototypeGameController.CreateStarCost})";
+                }
+            }
 
             if (collapseUniverseButton != null)
-                collapseUniverseButton.interactable = canPlay;
+                collapseUniverseButton.interactable = canPlay && !controller.IsSingleStarMode;
         }
 
         private void RefreshStatsLive()
@@ -187,10 +291,27 @@ namespace Universes.Prototype
             if (statsText == null || controller == null)
                 return;
 
-            if (controller.IsCollapsed)
+            if (controller.IsRunEnded)
             {
+                statsText.text = controller.IsSingleStarMode
+                    ? "Star system ended. Review your summary and start a new system."
+                    : "Universe collapsed. Universe DNA is permanent — spend it on prestige upgrades, then start a new universe.";
+                return;
+            }
+
+            if (controller.IsSingleStarMode && controller.CentralStar != null)
+            {
+                var manager = controller.PlanetManager;
+                var max = manager != null && manager.IsInitialized
+                    ? manager.GetMaxPlanets()
+                    : PrototypePlanetBalance.BaseMaxPlanets;
+                var count = manager != null && manager.IsInitialized
+                    ? manager.PlanetCount
+                    : 0;
                 statsText.text =
-                    "Universe collapsed. Universe DNA is permanent — spend it on prestige upgrades, then start a new universe.";
+                    $"Star Age: {controller.StarAge}/{controller.GetMaxStarHealth()} ({controller.Stage})\n" +
+                    $"Click: +{controller.GetClickReward()}  |  Passive: +{controller.GetTotalPassivePerSecond()}/s\n" +
+                    $"Planets: {count}/{max}  |  DNA Potential: {controller.DnaPotential:0}";
                 return;
             }
 
@@ -203,9 +324,7 @@ namespace Universes.Prototype
             }
             else
             {
-                statsText.text =
-                    $"No active stars\n" +
-                    $"Supernova bonus: +{controller.GetSupernovaBonus()}";
+                statsText.text = $"No active stars\nSupernova bonus: +{controller.GetSupernovaBonus()}";
             }
         }
 

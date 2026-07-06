@@ -1,5 +1,12 @@
 fileFormatVersion: 2
 guid: f171b2214921eed4fbc438e284523f3a
+AssetOrigin:
+  serializedVersion: 1
+  productId: 384902
+  packageName: VFX Fantasy Pack DEMO
+  packageVersion: 1.0
+  assetPath: Assets/VFXFantasyPackDEMO/Content/Atlas/Sprites/SlashLight_01.png
+  uploadId: 928334
 TextureImporter:
   internalIDToNameTable:
   - first:
@@ -9,7 +16,7 @@ TextureImporter:
   serializedVersion: 13
   mipmaps:
     mipMapMode: 0
-    enableMipMap: 0
+    enableMipMap: 1
     sRGBTexture: 1
     linearTexture: 0
     fadeOut: 0
@@ -57,7 +64,7 @@ TextureImporter:
   alphaUsage: 0
   alphaIsTransparency: 0
   spriteTessellationDetail: -1
-  textureType: 8
+  textureType: 0
   textureShape: 1
   singleChannelComponent: 0
   flipbookRows: 1
@@ -167,10 +174,3 @@ TextureImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 384902
-  packageName: VFX Fantasy Pack DEMO
-  packageVersion: 1.0
-  assetPath: Assets/VFXFantasyPackDEMO/Content/Atlas/Sprites/SlashLight_01.png
-  uploadId: 928334

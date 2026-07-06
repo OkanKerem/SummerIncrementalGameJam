@@ -52,7 +52,7 @@ namespace Universes.Prototype
 
         private void OnStateChanged()
         {
-            if (controller != null && !controller.IsCollapsed)
+            if (controller != null && !controller.IsRunEnded)
                 Hide();
         }
 
