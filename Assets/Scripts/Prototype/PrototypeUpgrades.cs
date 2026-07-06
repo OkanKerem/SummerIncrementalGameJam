@@ -31,10 +31,6 @@ namespace Universes.Prototype
 
         public bool IsUniverseExpanded => UniverseExpandedLevel > 0;
 
-        public const int SupernovaBonusPerLevel = 15;
-        public const float BaseClickCollectRadius = 1.1f;
-        public const float ClickCollectRadiusPerLevel = 0.45f;
-
         public int GetLevel(PrototypeUpgradeDefinition definition) =>
             definition != null ? GetLevel(definition.upgradeType) : 0;
 
@@ -90,11 +86,15 @@ namespace Universes.Prototype
             return true;
         }
 
-        public float GetAgeGainMultiplier() =>
-            1f / (1f + StarStabilityLevel * 0.25f);
+        public float GetAgeGainMultiplier(PrototypeUpgradeBalanceConfig balance) =>
+            1f / (1f + StarStabilityLevel *
+                (balance ?? new PrototypeUpgradeBalanceConfig()).starStabilityAgeGainReductionPerLevel);
 
-        public float GetClickCollectRadius() =>
-            BaseClickCollectRadius + ClickCollectRadiusLevel * ClickCollectRadiusPerLevel;
+        public float GetClickCollectRadius(PrototypeUpgradeBalanceConfig balance)
+        {
+            balance ??= new PrototypeUpgradeBalanceConfig();
+            return balance.baseClickCollectRadius + ClickCollectRadiusLevel * balance.clickCollectRadiusPerLevel;
+        }
 
         public void Reset()
         {

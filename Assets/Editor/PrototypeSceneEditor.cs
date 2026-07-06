@@ -25,6 +25,7 @@ namespace Universes.Editor
         private const string PrestigeRowPrefabPath = "Assets/Prefabs/Prototype/PrestigeRow.prefab";
         private const string PrestigePanelPrefabPath = "Assets/Prefabs/Prototype/PrestigePanel.prefab";
         private const string PlanetPrefabPath = "Assets/Prefabs/Prototype/Planet.prefab";
+        private const string SpeciesEntryPrefabPath = "Assets/Prefabs/Prototype/SpeciesEntry.prefab";
         private const string PrototypePlanetTypesFolder = "Assets/ScriptableObjects/Prototype/Planets";
         private const string PlanetTypeCatalogPath = "Assets/ScriptableObjects/Prototype/Planets/PlanetTypeCatalog.asset";
         private const string SingleStarBalancePath = "Assets/ScriptableObjects/Prototype/SingleStarBalance.asset";
@@ -80,6 +81,7 @@ namespace Universes.Editor
             var planetCatalog = LoadOrCreatePlanetTypeCatalog();
             var singleStarBalance = LoadOrCreateSingleStarBalance();
             RebuildSingleStarUpgradePanelPrefab();
+            RebuildSpeciesEntryPrefab();
 
             var planetManager = controller.GetComponent<PrototypePlanetManager>();
             if (planetManager == null)
@@ -93,8 +95,27 @@ namespace Universes.Editor
             SetEnum(controller, "gameplayMode", (int)PrototypeGameplayMode.SingleStarSystemAge);
 
             BuildSingleStarStepUi(canvas.gameObject, controller, hud);
+            BuildSpeciesUi(canvas.gameObject, controller);
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-            Debug.Log("Single Star System Age UI: planet button, upgrades, star system end panel.");
+            Debug.Log("Single Star System Age UI: planet button, upgrades, species panel, and star system end panel.");
+        }
+
+        [MenuItem("Universes/Add Prototype Species UI To Open Scene")]
+        public static void AddSpeciesUiToOpenScene()
+        {
+            var controller = Object.FindAnyObjectByType<PrototypeGameController>();
+            var canvas = Object.FindAnyObjectByType<Canvas>();
+            if (controller == null || canvas == null)
+            {
+                Debug.LogWarning("Need PrototypeGame and Canvas in the open scene.");
+                return;
+            }
+
+            RebuildSpeciesEntryPrefab();
+            BuildSpeciesUi(canvas.gameObject, controller);
+            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            AssetDatabase.SaveAssets();
+            Debug.Log("Species button and species panel added without changing other scene UI.");
         }
 
         [MenuItem("Universes/Create Prototype Planet Prefab")]
@@ -104,6 +125,15 @@ namespace Universes.Editor
             LoadOrCreatePlanetPrefab();
             AssetDatabase.SaveAssets();
             Debug.Log($"Planet prefab ready at {PlanetPrefabPath}");
+        }
+
+        [MenuItem("Universes/Create Prototype Species UI Prefabs")]
+        public static void CreateSpeciesUiPrefabsMenu()
+        {
+            EnsureFolder("Assets/Prefabs/Prototype");
+            RebuildSpeciesEntryPrefab();
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Species entry prefab ready at {SpeciesEntryPrefabPath}");
         }
 
         [MenuItem("Universes/Create Prototype Single Star Balance Asset")]
@@ -939,6 +969,264 @@ namespace Universes.Editor
                 SetRef(panel, "controller", controller);
         }
 
+        private static void BuildSpeciesUi(GameObject canvasGo, PrototypeGameController controller)
+        {
+            var old = canvasGo.transform.Find("SpeciesUI");
+            if (old != null)
+                Object.DestroyImmediate(old.gameObject);
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var entryPrefab = LoadOrCreateSpeciesEntryPrefab();
+
+            var root = new GameObject("SpeciesUI", typeof(RectTransform));
+            root.transform.SetParent(canvasGo.transform, false);
+            Stretch(root.GetComponent<RectTransform>());
+            var portraitPool = root.AddComponent<PrototypeSpeciesPortraitPool>();
+
+            var buttonGo = new GameObject("SpeciesButton", typeof(RectTransform));
+            buttonGo.transform.SetParent(root.transform, false);
+            var buttonRect = buttonGo.GetComponent<RectTransform>();
+            buttonRect.anchorMin = new Vector2(0f, 0f);
+            buttonRect.anchorMax = new Vector2(0f, 0f);
+            buttonRect.pivot = new Vector2(0f, 0f);
+            buttonRect.anchoredPosition = new Vector2(16, 24);
+            buttonRect.sizeDelta = new Vector2(150, 42);
+            var buttonImage = buttonGo.AddComponent<Image>();
+            buttonImage.color = new Color(0.18f, 0.32f, 0.5f, 0.95f);
+            var openButton = buttonGo.AddComponent<Button>();
+
+            var buttonLabel = CreateText(buttonGo.transform, "Species", font, 16);
+            Stretch(buttonLabel.rectTransform);
+            buttonLabel.alignment = TextAnchor.MiddleCenter;
+            buttonLabel.fontStyle = FontStyle.Bold;
+
+            var panelGo = new GameObject("SpeciesPanel", typeof(RectTransform));
+            panelGo.transform.SetParent(root.transform, false);
+            var panelRect = panelGo.GetComponent<RectTransform>();
+            panelRect.anchorMin = new Vector2(0f, 0f);
+            panelRect.anchorMax = new Vector2(0f, 1f);
+            panelRect.pivot = new Vector2(0f, 0.5f);
+            panelRect.anchoredPosition = new Vector2(16, 0);
+            panelRect.sizeDelta = new Vector2(330, -140);
+            panelGo.AddComponent<Image>().color = new Color(0.06f, 0.07f, 0.12f, 0.96f);
+
+            var title = CreateText(panelGo.transform, "Species", font, 22);
+            var titleRect = title.rectTransform;
+            titleRect.anchorMin = new Vector2(0, 1);
+            titleRect.anchorMax = new Vector2(1, 1);
+            titleRect.pivot = new Vector2(0.5f, 1f);
+            titleRect.anchoredPosition = new Vector2(0, -12);
+            titleRect.sizeDelta = new Vector2(-64, 34);
+            title.fontStyle = FontStyle.Bold;
+
+            var closeGo = new GameObject("CloseButton", typeof(RectTransform));
+            closeGo.transform.SetParent(panelGo.transform, false);
+            var closeRect = closeGo.GetComponent<RectTransform>();
+            closeRect.anchorMin = new Vector2(1f, 1f);
+            closeRect.anchorMax = new Vector2(1f, 1f);
+            closeRect.pivot = new Vector2(1f, 1f);
+            closeRect.anchoredPosition = new Vector2(-10, -10);
+            closeRect.sizeDelta = new Vector2(34, 30);
+            closeGo.AddComponent<Image>().color = new Color(0.2f, 0.22f, 0.3f, 0.95f);
+            var closeButton = closeGo.AddComponent<Button>();
+
+            var closeText = CreateText(closeGo.transform, "X", font, 16);
+            Stretch(closeText.rectTransform);
+            closeText.alignment = TextAnchor.MiddleCenter;
+            closeText.fontStyle = FontStyle.Bold;
+
+            var scrollGo = new GameObject("SpeciesScroll", typeof(RectTransform));
+            scrollGo.transform.SetParent(panelGo.transform, false);
+            var scrollRectTransform = scrollGo.GetComponent<RectTransform>();
+            scrollRectTransform.anchorMin = Vector2.zero;
+            scrollRectTransform.anchorMax = Vector2.one;
+            scrollRectTransform.offsetMin = new Vector2(10, 12);
+            scrollRectTransform.offsetMax = new Vector2(-10, -58);
+
+            var scroll = scrollGo.AddComponent<ScrollRect>();
+            var viewport = new GameObject("Viewport", typeof(RectTransform));
+            viewport.transform.SetParent(scrollGo.transform, false);
+            Stretch(viewport.GetComponent<RectTransform>());
+            viewport.AddComponent<Image>().color = new Color(0, 0, 0, 0.01f);
+            viewport.AddComponent<Mask>().showMaskGraphic = false;
+
+            var content = new GameObject("Content", typeof(RectTransform));
+            content.transform.SetParent(viewport.transform, false);
+            var contentRect = content.GetComponent<RectTransform>();
+            contentRect.anchorMin = new Vector2(0, 1);
+            contentRect.anchorMax = new Vector2(1, 1);
+            contentRect.pivot = new Vector2(0.5f, 1);
+            contentRect.sizeDelta = new Vector2(0, 0);
+            var layout = content.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 8;
+            layout.padding = new RectOffset(4, 4, 4, 4);
+            layout.childForceExpandHeight = false;
+            content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+            scroll.content = contentRect;
+            scroll.viewport = viewport.GetComponent<RectTransform>();
+            scroll.horizontal = false;
+
+            var emptyText = CreateText(panelGo.transform, "No species discovered yet.", font, 15);
+            var emptyRect = emptyText.rectTransform;
+            emptyRect.anchorMin = new Vector2(0, 0.5f);
+            emptyRect.anchorMax = new Vector2(1, 0.5f);
+            emptyRect.anchoredPosition = new Vector2(0, 0);
+            emptyRect.sizeDelta = new Vector2(-32, 44);
+            emptyText.color = new Color(0.72f, 0.78f, 0.88f);
+
+            var detailGo = new GameObject("SpeciesDetailPanel", typeof(RectTransform));
+            detailGo.transform.SetParent(root.transform, false);
+            var detailRect = detailGo.GetComponent<RectTransform>();
+            detailRect.anchorMin = new Vector2(0f, 0.5f);
+            detailRect.anchorMax = new Vector2(0f, 0.5f);
+            detailRect.pivot = new Vector2(0f, 0.5f);
+            detailRect.anchoredPosition = new Vector2(362, 0);
+            detailRect.sizeDelta = new Vector2(380, 470);
+            detailGo.AddComponent<Image>().color = new Color(0.07f, 0.08f, 0.13f, 0.98f);
+
+            var detailTitle = CreateText(detailGo.transform, "Species", font, 22);
+            var detailTitleRect = detailTitle.rectTransform;
+            detailTitleRect.anchorMin = new Vector2(0, 1);
+            detailTitleRect.anchorMax = new Vector2(1, 1);
+            detailTitleRect.pivot = new Vector2(0.5f, 1f);
+            detailTitleRect.anchoredPosition = new Vector2(0, -16);
+            detailTitleRect.sizeDelta = new Vector2(-64, 34);
+            detailTitle.fontStyle = FontStyle.Bold;
+
+            var detailCloseGo = new GameObject("CloseButton", typeof(RectTransform));
+            detailCloseGo.transform.SetParent(detailGo.transform, false);
+            var detailCloseRect = detailCloseGo.GetComponent<RectTransform>();
+            detailCloseRect.anchorMin = new Vector2(1f, 1f);
+            detailCloseRect.anchorMax = new Vector2(1f, 1f);
+            detailCloseRect.pivot = new Vector2(1f, 1f);
+            detailCloseRect.anchoredPosition = new Vector2(-10, -10);
+            detailCloseRect.sizeDelta = new Vector2(34, 30);
+            detailCloseGo.AddComponent<Image>().color = new Color(0.2f, 0.22f, 0.3f, 0.95f);
+            var detailCloseButton = detailCloseGo.AddComponent<Button>();
+
+            var detailCloseText = CreateText(detailCloseGo.transform, "X", font, 16);
+            Stretch(detailCloseText.rectTransform);
+            detailCloseText.alignment = TextAnchor.MiddleCenter;
+            detailCloseText.fontStyle = FontStyle.Bold;
+
+            var portraitGo = new GameObject("SpeciesPortrait", typeof(RectTransform));
+            portraitGo.transform.SetParent(detailGo.transform, false);
+            var portraitRect = portraitGo.GetComponent<RectTransform>();
+            portraitRect.anchorMin = new Vector2(0.5f, 1f);
+            portraitRect.anchorMax = new Vector2(0.5f, 1f);
+            portraitRect.pivot = new Vector2(0.5f, 1f);
+            portraitRect.anchoredPosition = new Vector2(0, -60);
+            portraitRect.sizeDelta = new Vector2(104, 104);
+            var portraitImage = portraitGo.AddComponent<Image>();
+            portraitImage.color = new Color(0.65f, 0.95f, 0.75f);
+            var detailPortraitMount = portraitGo.AddComponent<PrototypeSpeciesPortraitMount>();
+            SetRef(detailPortraitMount, "portraitRoot", portraitGo.transform);
+            SetRef(detailPortraitMount, "fallbackImage", portraitImage);
+
+            var infoText = CreateText(detailGo.transform, "", font, 15);
+            var infoRect = infoText.rectTransform;
+            infoRect.anchorMin = new Vector2(0, 0.26f);
+            infoRect.anchorMax = new Vector2(1, 0.68f);
+            infoRect.offsetMin = new Vector2(22, 0);
+            infoRect.offsetMax = new Vector2(-22, 0);
+            infoText.alignment = TextAnchor.UpperLeft;
+
+            var descriptionText = CreateText(detailGo.transform, "", font, 13);
+            var descriptionRect = descriptionText.rectTransform;
+            descriptionRect.anchorMin = new Vector2(0, 0);
+            descriptionRect.anchorMax = new Vector2(1, 0.24f);
+            descriptionRect.offsetMin = new Vector2(22, 16);
+            descriptionRect.offsetMax = new Vector2(-22, -4);
+            descriptionText.alignment = TextAnchor.UpperLeft;
+            descriptionText.color = new Color(0.72f, 0.78f, 0.88f);
+
+            var panel = root.AddComponent<PrototypeSpeciesPanel>();
+            SetRef(panel, "controller", controller);
+            SetRef(panel, "panelRoot", panelGo);
+            SetRef(panel, "openButton", openButton);
+            SetRef(panel, "closeButton", closeButton);
+            SetRef(panel, "contentRoot", content.transform);
+            SetRef(panel, "speciesEntryPrefab", entryPrefab.GetComponent<PrototypeSpeciesEntryView>());
+            SetRef(panel, "portraitPool", portraitPool);
+            SetRef(panel, "emptyText", emptyText);
+            SetRef(panel, "detailPanelRoot", detailGo);
+            SetRef(panel, "detailCloseButton", detailCloseButton);
+            SetRef(panel, "detailPortraitImage", portraitImage);
+            SetRef(panel, "detailPortraitMount", detailPortraitMount);
+            SetRef(panel, "detailTitleText", detailTitle);
+            SetRef(panel, "detailInfoText", infoText);
+            SetRef(panel, "detailDescriptionText", descriptionText);
+
+            panelGo.SetActive(false);
+            detailGo.SetActive(false);
+        }
+
+        private static GameObject LoadOrCreateSpeciesEntryPrefab()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(SpeciesEntryPrefabPath);
+            if (existing != null)
+                return existing;
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var row = BuildSpeciesEntryObject(font);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(row, SpeciesEntryPrefabPath);
+            Object.DestroyImmediate(row);
+            return prefab;
+        }
+
+        private static GameObject RebuildSpeciesEntryPrefab()
+        {
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(SpeciesEntryPrefabPath) != null)
+                AssetDatabase.DeleteAsset(SpeciesEntryPrefabPath);
+
+            return LoadOrCreateSpeciesEntryPrefab();
+        }
+
+        private static GameObject BuildSpeciesEntryObject(Font font)
+        {
+            var row = new GameObject("SpeciesEntry", typeof(RectTransform));
+            var layout = row.AddComponent<VerticalLayoutGroup>();
+            layout.spacing = 6;
+            layout.childForceExpandHeight = false;
+            layout.padding = new RectOffset(8, 8, 8, 8);
+            layout.childAlignment = TextAnchor.UpperCenter;
+            row.AddComponent<LayoutElement>().minHeight = 142;
+
+            var bg = row.AddComponent<Image>();
+            bg.color = new Color(0.1f, 0.12f, 0.18f, 0.92f);
+
+            var portraitGo = new GameObject("SpeciesImage", typeof(RectTransform));
+            portraitGo.transform.SetParent(row.transform, false);
+            var portraitLayout = portraitGo.AddComponent<LayoutElement>();
+            portraitLayout.minWidth = 86;
+            portraitLayout.minHeight = 86;
+            portraitLayout.preferredWidth = 86;
+            portraitLayout.preferredHeight = 86;
+            var portraitImage = portraitGo.AddComponent<Image>();
+            portraitImage.color = new Color(0.65f, 0.95f, 0.75f);
+            var portraitButton = portraitGo.AddComponent<Button>();
+            var portraitMount = portraitGo.AddComponent<PrototypeSpeciesPortraitMount>();
+            SetRef(portraitMount, "portraitRoot", portraitGo.transform);
+            SetRef(portraitMount, "fallbackImage", portraitImage);
+
+            var speciesName = CreateText(row.transform, "Species", font, 14);
+            speciesName.color = new Color(0.65f, 0.95f, 0.75f);
+            speciesName.alignment = TextAnchor.MiddleCenter;
+            speciesName.fontStyle = FontStyle.Bold;
+            speciesName.gameObject.AddComponent<LayoutElement>().minHeight = 26;
+
+            var view = row.AddComponent<PrototypeSpeciesEntryView>();
+            var so = new SerializedObject(view);
+            so.FindProperty("portraitButton").objectReferenceValue = portraitButton;
+            so.FindProperty("portraitImage").objectReferenceValue = portraitImage;
+            so.FindProperty("portraitMount").objectReferenceValue = portraitMount;
+            so.FindProperty("speciesNameText").objectReferenceValue = speciesName;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            return row;
+        }
+
         private static GameObject LoadOrCreateUpgradeRowPrefab()
         {
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(UpgradeRowPrefabPath);
@@ -1589,7 +1877,10 @@ namespace Universes.Editor
         {
             var existing = AssetDatabase.LoadAssetAtPath<PrototypePlanetView>(PlanetPrefabPath);
             if (existing != null)
+            {
+                EnsurePlanetNameTooltipOnPrefab();
                 return existing;
+            }
 
             var go = new GameObject("Planet");
             var sr = go.AddComponent<SpriteRenderer>();
@@ -1599,9 +1890,48 @@ namespace Universes.Editor
             go.transform.localScale = Vector3.one * 0.22f;
             go.AddComponent<CircleCollider2D>().radius = 0.5f;
             var view = go.AddComponent<PrototypePlanetView>();
+            AddPlanetNameTooltip(go);
             var prefab = PrefabUtility.SaveAsPrefabAsset(go, PlanetPrefabPath);
             Object.DestroyImmediate(go);
             return prefab.GetComponent<PrototypePlanetView>();
+        }
+
+        private static void EnsurePlanetNameTooltipOnPrefab()
+        {
+            var root = PrefabUtility.LoadPrefabContents(PlanetPrefabPath);
+            try
+            {
+                if (root.GetComponent<PrototypePlanetNameTooltip>() == null)
+                {
+                    AddPlanetNameTooltip(root);
+                    PrefabUtility.SaveAsPrefabAsset(root, PlanetPrefabPath);
+                }
+            }
+            finally
+            {
+                PrefabUtility.UnloadPrefabContents(root);
+            }
+        }
+
+        private static void AddPlanetNameTooltip(GameObject planetRoot)
+        {
+            var labelGo = new GameObject("PlanetNameLabel");
+            labelGo.transform.SetParent(planetRoot.transform, false);
+            labelGo.transform.localPosition = new Vector3(0f, 0.42f, 0f);
+            labelGo.transform.localScale = Vector3.one;
+
+            var label = labelGo.AddComponent<TextMesh>();
+            label.text = "Planet";
+            label.fontSize = 36;
+            label.characterSize = 0.035f;
+            label.anchor = TextAnchor.MiddleCenter;
+            label.alignment = TextAlignment.Center;
+            label.color = Color.white;
+            label.GetComponent<MeshRenderer>().sortingOrder = 20;
+            labelGo.SetActive(false);
+
+            var tooltip = planetRoot.AddComponent<PrototypePlanetNameTooltip>();
+            SetRef(tooltip, "label", label);
         }
 
         private static PrototypePlanetTypeCatalog LoadOrCreatePlanetTypeCatalog()

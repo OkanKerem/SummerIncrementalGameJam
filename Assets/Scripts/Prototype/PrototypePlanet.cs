@@ -13,13 +13,20 @@ namespace Universes.Prototype
         public bool IsHabitable { get; }
         public PrototypeCivilizationStage CivilizationStage { get; private set; }
         public float CivilizationProgress { get; private set; }
+        public string PlanetName { get; private set; }
+        public string SpeciesName { get; private set; }
+        public string SpeciesDescription { get; private set; }
+        public string CivilizationName { get; private set; }
+        public int Intelligence { get; private set; }
+        public int Aggression { get; private set; }
 
         public bool IsAlive => Durability > 0f;
         public bool HasLife => CivilizationStage > PrototypeCivilizationStage.NoLife;
+        public bool HasSpecies => !string.IsNullOrWhiteSpace(SpeciesName);
         public bool LifeCountedForStats { get; set; }
 
         public PrototypePlanet(int id, PrototypePlanetTypeDefinition definition, int orbitSlot,
-            float orbitRadius, float orbitAngle, bool isHabitable)
+            float orbitRadius, float orbitAngle, bool isHabitable, float fallbackMaxDurability)
         {
             Id = id;
             Definition = definition;
@@ -28,7 +35,7 @@ namespace Universes.Prototype
             OrbitAngle = orbitAngle;
             IsHabitable = isHabitable;
 
-            MaxDurability = definition != null ? definition.maxDurability : 100f;
+            MaxDurability = definition != null ? definition.maxDurability : fallbackMaxDurability;
             Durability = MaxDurability;
             CivilizationStage = PrototypeCivilizationStage.NoLife;
         }
@@ -41,7 +48,8 @@ namespace Universes.Prototype
             Durability = UnityEngine.Mathf.Max(0f, Durability - amount);
         }
 
-        public bool TryAddCivilizationProgress(float amount, out PrototypeCivilizationStage advancedTo)
+        public bool TryAddCivilizationProgress(float amount, PrototypeCivilizationBalanceConfig balance,
+            out PrototypeCivilizationStage advancedTo)
         {
             advancedTo = CivilizationStage;
 
@@ -50,9 +58,12 @@ namespace Universes.Prototype
 
             var before = CivilizationStage;
             CivilizationProgress += amount;
-            while (CivilizationProgress >= 1f && PrototypeCivilizationUtility.CanProgress(CivilizationStage))
+            while (PrototypeCivilizationUtility.CanProgress(CivilizationStage, balance) &&
+                   CivilizationProgress >=
+                   PrototypeCivilizationUtility.GetProgressRequirement(CivilizationStage, balance))
             {
-                CivilizationProgress -= 1f;
+                CivilizationProgress -=
+                    PrototypeCivilizationUtility.GetProgressRequirement(CivilizationStage, balance);
                 CivilizationStage = PrototypeCivilizationUtility.Next(CivilizationStage);
             }
 
@@ -70,6 +81,17 @@ namespace Universes.Prototype
 
             CivilizationStage = stage;
             CivilizationProgress = 0f;
+        }
+
+        public void AssignLifeIdentity(string planetName, string speciesName, string speciesDescription,
+            string civilizationName, int intelligence, int aggression)
+        {
+            PlanetName = planetName;
+            SpeciesName = speciesName;
+            SpeciesDescription = speciesDescription;
+            CivilizationName = civilizationName;
+            Intelligence = intelligence;
+            Aggression = aggression;
         }
     }
 }

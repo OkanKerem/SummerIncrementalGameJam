@@ -38,10 +38,27 @@ namespace Universes.Prototype
         [Range(0f, 1f)] public float planetDnaChancePerLevel = 0.012f;
         [Min(0f)] public float planetClickValuePerLevel = 1.5f;
 
+        [Header("Balance Configs")]
+        public PrototypeSpeciesBalanceConfig species = new();
+        public PrototypePlanetBalanceConfig planets = new();
+        public PrototypeCivilizationBalanceConfig civilization = new();
+        public PrototypeUpgradeBalanceConfig upgrades = new();
+
+        private void OnEnable() => EnsureNestedConfigs();
+
+        public void EnsureNestedConfigs()
+        {
+            species ??= new PrototypeSpeciesBalanceConfig();
+            planets ??= new PrototypePlanetBalanceConfig();
+            civilization ??= new PrototypeCivilizationBalanceConfig();
+            upgrades ??= new PrototypeUpgradeBalanceConfig();
+        }
+
         public static PrototypeSingleStarBalance CreateRuntimeDefault()
         {
             var balance = CreateInstance<PrototypeSingleStarBalance>();
             balance.name = "RuntimeSingleStarBalance";
+            balance.EnsureNestedConfigs();
             return balance;
         }
     }

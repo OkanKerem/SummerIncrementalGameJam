@@ -82,6 +82,8 @@ namespace Universes.Prototype
         {
             if (singleStarBalance == null)
                 _runtimeSingleStarBalance = PrototypeSingleStarBalance.CreateRuntimeDefault();
+            else
+                singleStarBalance.EnsureNestedConfigs();
 
             EnsureWorldRoot();
             EnsureManagersInitialized();
@@ -218,12 +220,14 @@ namespace Universes.Prototype
         public int GetPassivePerSecond() => GetTotalPassivePerSecond();
 
         public int GetSupernovaBonus() =>
-            BaseSupernovaBonus + Upgrades.SupernovaBonusLevel * PrototypeUpgrades.SupernovaBonusPerLevel;
+            BaseSupernovaBonus + Upgrades.SupernovaBonusLevel *
+            SingleStarBalance.upgrades.supernovaBonusPerLevel;
 
-        public float GetClickCollectRadius() => Upgrades.GetClickCollectRadius();
+        public float GetClickCollectRadius() => Upgrades.GetClickCollectRadius(SingleStarBalance.upgrades);
 
         public float GetEffectiveAgeGainMultiplier() =>
-            Upgrades.GetAgeGainMultiplier() * PrototypePrestigeModifiers.GetAgeGainMultiplier(Prestige);
+            Upgrades.GetAgeGainMultiplier(SingleStarBalance.upgrades) *
+            PrototypePrestigeModifiers.GetAgeGainMultiplier(Prestige);
 
         public float GetEntropyGainMultiplier() => PrototypePrestigeModifiers.GetEntropyMultiplier(Prestige);
 
@@ -410,11 +414,20 @@ namespace Universes.Prototype
                 return 0;
 
             var definition = planet.Definition;
-            return Mathf.RoundToInt((definition != null ? definition.baseClickValue : 1) +
-                                    Upgrades.PlanetClickValueLevel *
-                                    (IsSingleStarMode
-                                        ? SingleStarBalance.planetClickValuePerLevel
-                                        : PrototypePlanetBalance.PlanetClickValuePerLevel));
+            var baseReward = (definition != null
+                                 ? definition.baseClickValue
+                                 : SingleStarBalance.planets.fallbackBaseClickReward) +
+                             Upgrades.PlanetClickValueLevel *
+                             (IsSingleStarMode
+                                 ? SingleStarBalance.planetClickValuePerLevel
+                                 : PrototypePlanetBalance.PlanetClickValuePerLevel);
+            var civilizationMultiplier =
+                SingleStarBalance.civilization.GetStageClickBonusMultiplier(planet.CivilizationStage);
+            var speciesMultiplier = planet.HasSpecies
+                ? SingleStarBalance.species.GetClickStardustMultiplier(planet.Intelligence, planet.Aggression)
+                : 1f;
+
+            return Mathf.RoundToInt((float)baseReward * civilizationMultiplier * speciesMultiplier);
         }
 
         public float GetPlanetClickDamage() =>
@@ -918,7 +931,8 @@ namespace Universes.Prototype
             _controller = controller;
             transform.position = position;
             _lifetime = PrototypeCosmicBalance.BlackHoleLifetimeSeconds;
-            _dnaTimer = PrototypeCosmicBalance.BlackHoleDnaIntervalSeconds * 0.5f;
+            _dnaTimer = PrototypeCosmicBalance.BlackHoleDnaIntervalSeconds *
+                        PrototypeCosmicBalance.BlackHoleInitialDnaTimerMultiplier;
             _age = 0f;
             DnaPotential = 0f;
 
@@ -954,7 +968,7 @@ namespace Universes.Prototype
                 DnaPotential += 1f;
                 _controller.AddBlackHoleDnaPotential(_controller.GetBlackHoleDnaMultiplier());
 
-                if (UnityEngine.Random.value < 0.35f)
+                if (UnityEngine.Random.value < PrototypeCosmicBalance.BlackHoleDnaFragmentChance)
                     _controller.TrySpawnDnaFragment(transform.position);
             }
 

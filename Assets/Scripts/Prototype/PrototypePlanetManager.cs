@@ -29,6 +29,7 @@ namespace Universes.Prototype
 
         public event Action OnPlanetsChanged;
         public event Action<PrototypePlanet, PrototypeCivilizationStage> OnCivilizationAdvanced;
+        public event Action<string> OnCivilizationEvent;
 
         private PrototypeSingleStarBalance Balance => _controller?.SingleStarBalance;
 
@@ -161,22 +162,26 @@ namespace Universes.Prototype
             }
 
             var habitable = RollHabitable(definition);
-            var orbitRadius = Balance.baseOrbitRadius + slot * Balance.orbitRadiusStep;
+            var orbitRadius = CalculateOrbitRadius(slot, definition);
             var angle = UnityEngine.Random.Range(0f, 360f);
 
-            var planet = new PrototypePlanet(_nextPlanetId++, definition, slot, orbitRadius, angle, habitable);
+            var planet = new PrototypePlanet(_nextPlanetId++, definition, slot, orbitRadius, angle, habitable,
+                Balance.planets.fallbackBaseDurability);
             _planets.Add(planet);
 
             if (habitable && planet.IsHabitable &&
-                UnityEngine.Random.value < Balance.lifeProgressBase * 0.5f)
+                UnityEngine.Random.value < Balance.lifeProgressBase * Balance.planets.initialLifeChanceMultiplier)
+            {
+                EnsureLifeIdentity(planet);
                 planet.ForceLifeStage(PrototypeCivilizationStage.Life);
+            }
 
             OnPlanetsChanged?.Invoke();
             _controller.NotifyStateChanged();
 
             PlayPlanetSpawnEffect(planet);
 
-            var delay = Balance != null ? Balance.planetSpawnDelay : 0.45f;
+            var delay = Balance.planetSpawnDelay;
             if (delay > 0f)
                 yield return new WaitForSeconds(delay);
 
@@ -210,7 +215,8 @@ namespace Universes.Prototype
             }
 
             return PrototypePlanetTypeUtility.CreateFallbackDefinition(
-                PrototypePlanetTypeUtility.RollRandomFallback());
+                PrototypePlanetTypeUtility.RollRandomFallback(Balance.planets),
+                Balance.planets);
         }
 
         private void PlayPlanetSpawnEffect(PrototypePlanet planet)
@@ -258,6 +264,34 @@ namespace Universes.Prototype
             return -1;
         }
 
+        private float CalculateOrbitRadius(int slot, PrototypePlanetTypeDefinition definition)
+        {
+            var newVisualRadius = GetPlanetVisualRadius(definition);
+            var radius = Balance.baseOrbitRadius + newVisualRadius;
+
+            foreach (var planet in _planets
+                         .Where(p => p.IsAlive && p.OrbitSlot < slot)
+                         .OrderBy(p => p.OrbitRadius))
+            {
+                var innerVisualRadius = GetPlanetVisualRadius(planet.Definition);
+                var requiredRadius = planet.OrbitRadius +
+                                     innerVisualRadius +
+                                     newVisualRadius +
+                                     Balance.orbitRadiusStep;
+                radius = Mathf.Max(radius, requiredRadius);
+            }
+
+            return radius;
+        }
+
+        private static float GetPlanetVisualRadius(PrototypePlanetTypeDefinition definition)
+        {
+            if (definition == null)
+                return 0.5f;
+
+            return Mathf.Max(0.05f, definition.visualScale * 0.5f);
+        }
+
         private bool RollHabitable(PrototypePlanetTypeDefinition definition)
         {
             if (definition == null || definition.habitability <= 0f)
@@ -267,14 +301,7 @@ namespace Universes.Prototype
                         _controller.Upgrades.HabitablePlanetChanceLevel *
                         Balance.habitableChancePerLevel;
 
-            var stageBonus = _hostStar.Stage switch
-            {
-                PrototypeStarStage.Yellow => 0.1f,
-                PrototypeStarStage.Orange => 0.05f,
-                _ => -0.1f
-            };
-
-            var chance = definition.habitability + bonus + stageBonus;
+            var chance = definition.habitability + bonus + Balance.planets.GetHabitabilityBonus(_hostStar.Stage);
             return UnityEngine.Random.value < Mathf.Clamp01(chance);
         }
 
@@ -311,24 +338,23 @@ namespace Universes.Prototype
                     continue;
 
                 var durabilityFactor = planet.Durability / planet.MaxDurability;
-                var stageFactor = _hostStar.Stage switch
-                {
-                    PrototypeStarStage.Yellow => 1.1f,
-                    PrototypeStarStage.Orange => 1f,
-                    PrototypeStarStage.RedGiant => 0.7f,
-                    _ => 0.3f
-                };
+                var stageFactor = Balance.planets.GetCivilizationSpeedMultiplier(_hostStar.Stage);
+                var speciesFactor = planet.HasSpecies
+                    ? Balance.species.GetCivilizationSpeedMultiplier(planet.Intelligence, planet.Aggression)
+                    : 1f;
 
                 var progress = Balance.lifeProgressBase *
                                definition.habitability *
                                durabilityFactor *
                                stageFactor *
+                               speciesFactor *
                                _controller.GetEffectiveAgeGainMultiplier();
 
                 if (planet.CivilizationStage == PrototypeCivilizationStage.NoLife)
                 {
                     if (UnityEngine.Random.value < progress)
                     {
+                        EnsureLifeIdentity(planet);
                         planet.ForceLifeStage(PrototypeCivilizationStage.Life);
                         if (!planet.LifeCountedForStats)
                         {
@@ -339,10 +365,12 @@ namespace Universes.Prototype
                         NotifyCivilizationAdvanced(planet, PrototypeCivilizationStage.Life);
                     }
                 }
-                else if (planet.TryAddCivilizationProgress(progress, out var advancedTo))
+                else if (planet.TryAddCivilizationProgress(progress, Balance.civilization, out var advancedTo))
                 {
                     NotifyCivilizationAdvanced(planet, advancedTo);
                 }
+
+                TickAggressionRisk(planet);
 
                 var rank = (int)planet.CivilizationStage;
                 if (rank > HighestCivilizationRank)
@@ -359,6 +387,59 @@ namespace Universes.Prototype
         private void NotifyCivilizationAdvanced(PrototypePlanet planet, PrototypeCivilizationStage stage) =>
             OnCivilizationAdvanced?.Invoke(planet, stage);
 
+        private void EnsureLifeIdentity(PrototypePlanet planet)
+        {
+            if (planet == null || planet.HasSpecies)
+                return;
+
+            var speciesBalance = Balance.species;
+            var planetName = PrototypeSpeciesNaming.GeneratePlanetName(planet.Id);
+            var speciesName = PrototypeSpeciesNaming.GenerateSpeciesName();
+            planet.AssignLifeIdentity(
+                planetName,
+                speciesName,
+                PrototypeSpeciesNaming.GenerateFlavor(planetName, speciesName),
+                PrototypeSpeciesNaming.GenerateCivilizationName(speciesName),
+                speciesBalance.RollTrait(),
+                speciesBalance.RollTrait());
+        }
+
+        private void TickAggressionRisk(PrototypePlanet planet)
+        {
+            if (planet == null || !planet.HasSpecies ||
+                planet.CivilizationStage < Balance.species.selfDamageMinimumStage)
+                return;
+
+            var damageChance = Balance.species.GetSelfDamageChance(planet.Aggression);
+            if (damageChance > 0f && UnityEngine.Random.value < damageChance)
+            {
+                planet.Damage(Balance.species.aggressionSelfDamageAmount);
+                OnCivilizationEvent?.Invoke(
+                    $"{planet.SpeciesName} conflict damaged {GetPlanetDisplayName(planet)}.");
+
+                if (!planet.IsAlive)
+                {
+                    if (_views.TryGetValue(planet.Id, out var view) && view != null)
+                        PlayPlanetDestroyEffect(view);
+
+                    DestroyPlanet(planet.Id);
+                    return;
+                }
+            }
+
+            if (planet.CivilizationStage < Balance.species.selfDestructionMinimumStage)
+                return;
+
+            var selfDestructionChance = Balance.species.GetSelfDestructionChance(planet.Aggression) *
+                                        Balance.civilization.GetSelfDestructionRiskMultiplier(
+                                            planet.CivilizationStage);
+            if (selfDestructionChance <= 0f || UnityEngine.Random.value >= selfDestructionChance)
+                return;
+
+            planet.ForceLifeStage(Balance.species.selfDestructionRegressToStage);
+            OnCivilizationEvent?.Invoke($"{planet.SpeciesName} civilization collapsed on {GetPlanetDisplayName(planet)}.");
+        }
+
         private void TickDnaGeneration(float deltaTime)
         {
             _dnaTimer += deltaTime;
@@ -373,24 +454,39 @@ namespace Universes.Prototype
                 if (definition == null)
                     continue;
 
-                var civMult = PrototypeCivilizationUtility.GetDnaMultiplier(planet.CivilizationStage);
+                var civMult = PrototypeCivilizationUtility.GetDnaMultiplier(
+                    planet.CivilizationStage,
+                    Balance.civilization);
                 if (civMult <= 0f && definition.dnaChance <= 0f)
                     continue;
 
-                var chance = (definition.dnaChance + civMult * 0.05f) *
+                var chance = (definition.dnaChance + civMult * Balance.planets.civilizationDnaChanceMultiplier) *
                              (1f + _controller.Upgrades.PlanetDnaChanceLevel *
                               Balance.planetDnaChancePerLevel);
 
                 if (planet.HasLife)
-                    chance *= 1.25f;
+                    chance *= Balance.planets.lifeDnaChanceMultiplier;
 
                 if (UnityEngine.Random.value < chance)
                 {
-                    var amount = 1f + civMult;
+                    var speciesMultiplier = planet.HasSpecies
+                        ? Balance.species.GetDnaPotentialMultiplier(planet.Intelligence, planet.Aggression)
+                        : 1f;
+                    var amount = (Balance.planets.baseDnaPotentialAmount + civMult) * speciesMultiplier;
                     var position = GetPlanetWorldPosition(planet);
                     _controller.TrySpawnDnaPotential(position, amount);
                 }
             }
+        }
+
+        public string GetPlanetDisplayName(PrototypePlanet planet)
+        {
+            if (planet == null)
+                return "Planet";
+
+            return !string.IsNullOrWhiteSpace(planet.PlanetName)
+                ? planet.PlanetName
+                : PrototypePlanetTypeUtility.GetLabel(planet.Definition);
         }
 
         private Vector3 GetPlanetWorldPosition(PrototypePlanet planet)

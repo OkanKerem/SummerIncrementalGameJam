@@ -56,7 +56,10 @@ namespace Universes.Prototype
 
             var planetManager = controller.PlanetManager;
             if (planetManager != null)
+            {
                 planetManager.OnCivilizationAdvanced += OnCivilizationAdvanced;
+                planetManager.OnCivilizationEvent += ShowMessage;
+            }
 
             createStarButton?.onClick.AddListener(OnPrimaryActionClicked);
             collapseUniverseButton?.onClick.AddListener(() => controller.TryCollapseUniverse());
@@ -82,9 +85,12 @@ namespace Universes.Prototype
             if (planet == null)
                 return;
 
-            var planetName = PrototypePlanetTypeUtility.GetLabel(planet.Definition);
-            var stageName = PrototypeCivilizationUtility.GetLabel(stage);
-            ShowMessage($"{planetName}: {stageName}!");
+            var planetName = controller.PlanetManager != null
+                ? controller.PlanetManager.GetPlanetDisplayName(planet)
+                : PrototypePlanetTypeUtility.GetLabel(planet.Definition);
+            var stageName = PrototypeCivilizationUtility.GetLabel(stage, controller.SingleStarBalance.civilization);
+            var speciesName = planet.HasSpecies ? $" ({planet.SpeciesName})" : string.Empty;
+            ShowMessage($"{planetName}{speciesName}: {stageName}!");
         }
 
         private void OnPrimaryActionClicked()

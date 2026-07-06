@@ -31,3 +31,6 @@ MonoBehaviour:
   clickEffectPrefab: {fileID: 0}
   destroyEffectPrefab: {fileID: 5940529053743077331, guid: 7c6d9bb9c8994364dbe5ba2e32dd4d13, type: 3}
   effectTint: {r: 0.49056602, g: 0.0485938, b: 0.33128926, a: 1}
+  effectTintChildName: Core
+  effectReferenceVisualScale: 0.22
+  effectScaleMultiplier: 0.4
