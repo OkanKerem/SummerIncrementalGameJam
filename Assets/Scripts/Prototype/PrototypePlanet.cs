@@ -3,6 +3,7 @@ namespace Universes.Prototype
     public class PrototypePlanet
     {
         public int Id { get; }
+        public int HostStarId { get; }
         public PrototypePlanetTypeDefinition Definition { get; }
         public PrototypePlanetType Type => Definition != null ? Definition.planetType : PrototypePlanetType.Rocky;
         public int OrbitSlot { get; }
@@ -25,10 +26,11 @@ namespace Universes.Prototype
         public bool HasSpecies => !string.IsNullOrWhiteSpace(SpeciesName);
         public bool LifeCountedForStats { get; set; }
 
-        public PrototypePlanet(int id, PrototypePlanetTypeDefinition definition, int orbitSlot,
+        public PrototypePlanet(int id, int hostStarId, PrototypePlanetTypeDefinition definition, int orbitSlot,
             float orbitRadius, float orbitAngle, bool isHabitable, float fallbackMaxDurability)
         {
             Id = id;
+            HostStarId = hostStarId;
             Definition = definition;
             OrbitSlot = orbitSlot;
             OrbitRadius = orbitRadius;

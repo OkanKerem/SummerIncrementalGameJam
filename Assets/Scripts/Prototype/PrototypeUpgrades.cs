@@ -12,7 +12,9 @@ namespace Universes.Prototype
         PlanetDnaChance,
         PlanetClickValue,
         HabitablePlanetChance,
-        ExpandUniverse
+        ExpandUniverse,
+        MaxStarCount,
+        AdvancedStarStability
     }
 
     public class PrototypeUpgrades
@@ -28,6 +30,8 @@ namespace Universes.Prototype
         public int PlanetClickValueLevel { get; private set; }
         public int HabitablePlanetChanceLevel { get; private set; }
         public int UniverseExpandedLevel { get; private set; }
+        public int MaxStarCountLevel { get; private set; }
+        public int AdvancedStarStabilityLevel { get; private set; }
 
         public bool IsUniverseExpanded => UniverseExpandedLevel > 0;
 
@@ -48,6 +52,8 @@ namespace Universes.Prototype
                 PrototypeUpgradeType.PlanetClickValue => PlanetClickValueLevel,
                 PrototypeUpgradeType.HabitablePlanetChance => HabitablePlanetChanceLevel,
                 PrototypeUpgradeType.ExpandUniverse => UniverseExpandedLevel,
+                PrototypeUpgradeType.MaxStarCount => MaxStarCountLevel,
+                PrototypeUpgradeType.AdvancedStarStability => AdvancedStarStabilityLevel,
                 _ => 0
             };
 
@@ -81,14 +87,17 @@ namespace Universes.Prototype
                 case PrototypeUpgradeType.PlanetClickValue: PlanetClickValueLevel++; break;
                 case PrototypeUpgradeType.HabitablePlanetChance: HabitablePlanetChanceLevel++; break;
                 case PrototypeUpgradeType.ExpandUniverse: UniverseExpandedLevel++; break;
+                case PrototypeUpgradeType.MaxStarCount: MaxStarCountLevel++; break;
+                case PrototypeUpgradeType.AdvancedStarStability: AdvancedStarStabilityLevel++; break;
             }
 
             return true;
         }
 
         public float GetAgeGainMultiplier(PrototypeUpgradeBalanceConfig balance) =>
-            1f / (1f + StarStabilityLevel *
-                (balance ?? new PrototypeUpgradeBalanceConfig()).starStabilityAgeGainReductionPerLevel);
+            1f / (1f +
+                  StarStabilityLevel * (balance ?? new PrototypeUpgradeBalanceConfig()).starStabilityAgeGainReductionPerLevel +
+                  AdvancedStarStabilityLevel * (balance ?? new PrototypeUpgradeBalanceConfig()).advancedStarStabilityAgeGainReductionPerLevel);
 
         public float GetClickCollectRadius(PrototypeUpgradeBalanceConfig balance)
         {
@@ -109,6 +118,8 @@ namespace Universes.Prototype
             PlanetClickValueLevel = 0;
             HabitablePlanetChanceLevel = 0;
             UniverseExpandedLevel = 0;
+            MaxStarCountLevel = 0;
+            AdvancedStarStabilityLevel = 0;
         }
 
         public void SetUniverseExpanded(bool expanded) =>

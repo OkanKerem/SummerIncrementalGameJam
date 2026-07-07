@@ -11,6 +11,7 @@ namespace Universes.Prototype
         [SerializeField] private PrototypePlanetView planetPrefab;
         [SerializeField] private PrototypePlanetTypeCatalog planetTypeCatalog;
         [SerializeField] private Transform planetsRoot;
+        [SerializeField] private Vector2 orbitEllipseScale = new(1.25f, 0.58f);
 
         private PrototypeGameController _controller;
         private PrototypeStarView _hostStar;
@@ -75,10 +76,25 @@ namespace Universes.Prototype
         public float GetOrbitSpeed() =>
             Balance != null ? Balance.orbitSpeed : PrototypePlanetBalance.OrbitSpeed;
 
+        public Vector3 GetOrbitOffset(PrototypePlanet planet)
+        {
+            if (planet == null)
+                return Vector3.zero;
+
+            var rad = planet.OrbitAngle * Mathf.Deg2Rad;
+            return new Vector3(
+                Mathf.Cos(rad) * planet.OrbitRadius * orbitEllipseScale.x,
+                Mathf.Sin(rad) * planet.OrbitRadius * orbitEllipseScale.y,
+                0f);
+        }
+
         public double GetCreatePlanetCost() =>
             Balance != null ? Balance.createPlanetCost : PrototypePlanetBalance.CreatePlanetCost;
 
-        public bool HasOpenSlot() => PlanetCount < GetMaxPlanets();
+        public bool HasOpenSlot() => _hostStar != null && GetPlanetCountForStar(_hostStar.StarId) < GetMaxPlanets();
+
+        public int GetPlanetCountForStar(int starId) =>
+            _planets.Count(p => p.IsAlive && p.HostStarId == starId);
 
         public bool TryCreatePlanet(bool free = false)
         {
@@ -102,7 +118,7 @@ namespace Universes.Prototype
 
         public void Tick(float deltaTime)
         {
-            if (_controller == null || _hostStar == null || !_hostStar.IsInteractable)
+            if (_controller == null)
                 return;
 
             foreach (var view in _views.Values)
@@ -149,7 +165,8 @@ namespace Universes.Prototype
 
         private IEnumerator CreateRandomPlanetRoutine()
         {
-            var slot = FindOpenOrbitSlot();
+            var hostStar = _hostStar;
+            var slot = FindOpenOrbitSlot(hostStar.StarId);
             if (slot < 0)
                 yield break;
 
@@ -161,11 +178,11 @@ namespace Universes.Prototype
                 yield break;
             }
 
-            var habitable = RollHabitable(definition);
-            var orbitRadius = CalculateOrbitRadius(slot, definition);
+            var habitable = RollHabitable(definition, hostStar);
+            var orbitRadius = CalculateOrbitRadius(hostStar.StarId, slot, definition);
             var angle = UnityEngine.Random.Range(0f, 360f);
 
-            var planet = new PrototypePlanet(_nextPlanetId++, definition, slot, orbitRadius, angle, habitable,
+            var planet = new PrototypePlanet(_nextPlanetId++, hostStar.StarId, definition, slot, orbitRadius, angle, habitable,
                 Balance.planets.fallbackBaseDurability);
             _planets.Add(planet);
 
@@ -196,12 +213,16 @@ namespace Universes.Prototype
 
         private void SpawnView(PrototypePlanet planet)
         {
-            if (planetPrefab == null || _hostStar == null)
+            if (planetPrefab == null)
+                return;
+
+            var hostStar = GetHostStar(planet);
+            if (hostStar == null)
                 return;
 
             var view = Instantiate(planetPrefab, planetsRoot);
             view.name = $"Planet_{PrototypePlanetTypeUtility.GetLabel(planet.Definition)}";
-            view.Bind(planet, this, _hostStar.transform);
+            view.Bind(planet, this, hostStar.transform);
             _views[planet.Id] = view;
         }
 
@@ -221,12 +242,14 @@ namespace Universes.Prototype
 
         private void PlayPlanetSpawnEffect(PrototypePlanet planet)
         {
-            if (planet?.Definition == null || _hostStar == null)
+            if (planet?.Definition == null)
                 return;
 
-            var rad = planet.OrbitAngle * Mathf.Deg2Rad;
-            var offset = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0f) * planet.OrbitRadius;
-            var position = _hostStar.transform.position + offset;
+            var hostStar = GetHostStar(planet);
+            if (hostStar == null)
+                return;
+
+            var position = hostStar.transform.position + GetOrbitOffset(planet);
             planet.Definition.PlayEffect(planet.Definition.spawnEffectPrefab, position, planetsRoot);
         }
 
@@ -252,9 +275,9 @@ namespace Universes.Prototype
                 planetsRoot);
         }
 
-        private int FindOpenOrbitSlot()
+        private int FindOpenOrbitSlot(int hostStarId)
         {
-            var used = new HashSet<int>(_planets.Where(p => p.IsAlive).Select(p => p.OrbitSlot));
+            var used = new HashSet<int>(_planets.Where(p => p.IsAlive && p.HostStarId == hostStarId).Select(p => p.OrbitSlot));
             for (var slot = 0; slot < GetMaxPlanets(); slot++)
             {
                 if (!used.Contains(slot))
@@ -264,13 +287,13 @@ namespace Universes.Prototype
             return -1;
         }
 
-        private float CalculateOrbitRadius(int slot, PrototypePlanetTypeDefinition definition)
+        private float CalculateOrbitRadius(int hostStarId, int slot, PrototypePlanetTypeDefinition definition)
         {
             var newVisualRadius = GetPlanetVisualRadius(definition);
             var radius = Balance.baseOrbitRadius + newVisualRadius;
 
             foreach (var planet in _planets
-                         .Where(p => p.IsAlive && p.OrbitSlot < slot)
+                         .Where(p => p.IsAlive && p.HostStarId == hostStarId && p.OrbitSlot < slot)
                          .OrderBy(p => p.OrbitRadius))
             {
                 var innerVisualRadius = GetPlanetVisualRadius(planet.Definition);
@@ -292,16 +315,16 @@ namespace Universes.Prototype
             return Mathf.Max(0.05f, definition.visualScale * 0.5f);
         }
 
-        private bool RollHabitable(PrototypePlanetTypeDefinition definition)
+        private bool RollHabitable(PrototypePlanetTypeDefinition definition, PrototypeStarView hostStar)
         {
-            if (definition == null || definition.habitability <= 0f)
+            if (definition == null || definition.habitability <= 0f || hostStar == null)
                 return false;
 
             var bonus = Balance.baseHabitableRollBonus +
                         _controller.Upgrades.HabitablePlanetChanceLevel *
                         Balance.habitableChancePerLevel;
 
-            var chance = definition.habitability + bonus + Balance.planets.GetHabitabilityBonus(_hostStar.Stage);
+            var chance = definition.habitability + bonus + Balance.planets.GetHabitabilityBonus(hostStar.Stage);
             return UnityEngine.Random.value < Mathf.Clamp01(chance);
         }
 
@@ -337,8 +360,12 @@ namespace Universes.Prototype
                 if (definition == null || !definition.canCivilize)
                     continue;
 
+                var hostStar = GetHostStar(planet);
+                if (hostStar == null)
+                    continue;
+
                 var durabilityFactor = planet.Durability / planet.MaxDurability;
-                var stageFactor = Balance.planets.GetCivilizationSpeedMultiplier(_hostStar.Stage);
+                var stageFactor = Balance.planets.GetCivilizationSpeedMultiplier(hostStar.Stage);
                 var speciesFactor = planet.HasSpecies
                     ? Balance.species.GetCivilizationSpeedMultiplier(planet.Intelligence, planet.Aggression)
                     : 1f;
@@ -494,12 +521,39 @@ namespace Universes.Prototype
             if (_views.TryGetValue(planet.Id, out var view) && view != null)
                 return view.transform.position;
 
-            if (_hostStar == null)
+            var hostStar = GetHostStar(planet);
+            if (hostStar == null)
                 return Vector3.zero;
 
-            var rad = planet.OrbitAngle * Mathf.Deg2Rad;
-            var offset = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0f) * planet.OrbitRadius;
-            return _hostStar.transform.position + offset;
+            return hostStar.transform.position + GetOrbitOffset(planet);
+        }
+
+        private PrototypeStarView GetHostStar(PrototypePlanet planet) =>
+            planet != null && _controller != null ? _controller.GetStarById(planet.HostStarId) : null;
+
+        public void ApplySupernovaToStar(PrototypeStarView star, float damageAmount, float destroyChance)
+        {
+            if (star == null)
+                return;
+
+            foreach (var planet in _planets.Where(p => p.IsAlive && p.HostStarId == star.StarId).ToList())
+            {
+                if (UnityEngine.Random.value < destroyChance)
+                    planet.Damage(planet.MaxDurability);
+                else
+                    planet.Damage(damageAmount);
+
+                if (!planet.IsAlive)
+                {
+                    if (_views.TryGetValue(planet.Id, out var destroyedView) && destroyedView != null)
+                        PlayPlanetDestroyEffect(destroyedView);
+                    DestroyPlanet(planet.Id);
+                }
+                else if (_views.TryGetValue(planet.Id, out var damagedView) && damagedView != null)
+                {
+                    damagedView.RefreshVisual();
+                }
+            }
         }
 
         private void DestroyPlanet(int id, bool recordDestruction = true)

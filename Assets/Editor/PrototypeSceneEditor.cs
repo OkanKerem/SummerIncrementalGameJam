@@ -439,6 +439,19 @@ namespace Universes.Editor
             Stretch(btnLabel.rectTransform);
             btnLabel.alignment = TextAnchor.MiddleCenter;
 
+            var planetBtnGo = new GameObject("CreatePlanetButton");
+            planetBtnGo.transform.SetParent(canvasGo.transform, false);
+            var planetBtnRect = planetBtnGo.AddComponent<RectTransform>();
+            planetBtnRect.anchorMin = new Vector2(0.5f, 0f);
+            planetBtnRect.anchorMax = new Vector2(0.5f, 0f);
+            planetBtnRect.anchoredPosition = new Vector2(0, 110);
+            planetBtnRect.sizeDelta = new Vector2(260, 40);
+            planetBtnGo.AddComponent<Image>().color = new Color(0.18f, 0.38f, 0.28f);
+            var planetBtn = planetBtnGo.AddComponent<Button>();
+            var planetBtnLabel = CreateText(planetBtnGo.transform, "Create Planet", font, 15);
+            Stretch(planetBtnLabel.rectTransform);
+            planetBtnLabel.alignment = TextAnchor.MiddleCenter;
+
             var collapsePanel = BuildStep3Ui(canvasGo, controller, hud);
             BuildStep4Ui(canvasGo, controller, hud, stardust, dna);
 
@@ -451,6 +464,8 @@ namespace Universes.Editor
             SetRef(hud, "dnaCollector", dna.rectTransform);
             SetRef(hud, "createStarButton", btn);
             SetRef(hud, "createStarButtonText", btnLabel);
+            SetRef(hud, "createPlanetButton", planetBtn);
+            SetRef(hud, "createPlanetButtonText", planetBtnLabel);
             SetRef(hud, "collapsePanel", collapsePanel);
 
             return floater;
@@ -1734,6 +1749,10 @@ namespace Universes.Editor
                 "Planet Click Value", "More Stardust when clicking planets");
             CreateUpgradeDefinition(PrototypeUpgradeType.HabitablePlanetChance, "habitable_planet_chance",
                 "Habitable Planet Chance", "New planets are more likely to support life");
+            CreateUpgradeDefinition(PrototypeUpgradeType.MaxStarCount, "max_star_count",
+                "Max Star Count", "Unlocks one additional active star slot per level, up to five stars.");
+            CreateUpgradeDefinition(PrototypeUpgradeType.AdvancedStarStability, "advanced_star_stability",
+                "Advanced Star Stability", "Further slows star aging after basic stability is developed.");
             CreateExpandUniverseDefinition();
         }
 
@@ -1748,7 +1767,7 @@ namespace Universes.Editor
             def.upgradeType = PrototypeUpgradeType.ExpandUniverse;
             def.displayName = "Expand Universe";
             def.description =
-                "Unlock Step 2: drift through a wider cosmos with many stars, entropy, particle collection, black holes, and universe collapse.";
+                "Unlock Step 2: Multi-Star System Age with star slots, buying new stars, independent star lifecycles, and planets around selected stars.";
             def.baseCost = 500;
             def.costScale = 1f;
             def.maxLevel = 1;
@@ -1842,6 +1861,8 @@ namespace Universes.Editor
                 LoadUpgradeDefinition("planet_dna_chance"),
                 LoadUpgradeDefinition("planet_click_value"),
                 LoadUpgradeDefinition("habitable_planet_chance"),
+                LoadUpgradeDefinition("max_star_count"),
+                LoadUpgradeDefinition("advanced_star_stability"),
                 LoadUpgradeDefinition("expand_universe")
             };
 

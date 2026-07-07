@@ -1,4 +1,5 @@
 using Universes.Stars;
+using TMPro;
 using UnityEngine;
 
 namespace Universes.Presentation
@@ -13,6 +14,8 @@ namespace Universes.Presentation
         private static readonly Color Supernova = new(1f, 1f, 1f);
         private static readonly Color Dead = new(0.3f, 0.3f, 0.35f);
 
+        [SerializeField] private TMP_Text nameLabel;
+
         private Star _star;
         private StarManager _manager;
         private SpriteRenderer _sprite;
@@ -24,6 +27,7 @@ namespace Universes.Presentation
             _manager = manager;
             _sprite = GetComponent<SpriteRenderer>();
             RefreshVisual();
+            RefreshNameLabel();
         }
 
         private void Update()
@@ -56,6 +60,34 @@ namespace Universes.Presentation
                 StarStage.Supernova => Vector3.one * 1.6f,
                 _ => Vector3.one
             };
+
+            RefreshNameLabel();
+        }
+
+        private void RefreshNameLabel()
+        {
+            ResolveNameLabel();
+
+            if (nameLabel == null || _star == null)
+                return;
+
+            var hasName = !string.IsNullOrWhiteSpace(_star.Name);
+            nameLabel.enabled = hasName;
+            if (hasName)
+                nameLabel.text = _star.Name;
+        }
+
+        private void ResolveNameLabel()
+        {
+            if (nameLabel != null)
+                return;
+
+            var existing = transform.Find("StarNameLabel");
+            if (existing != null)
+                nameLabel = existing.GetComponent<TMP_Text>();
+
+            if (nameLabel == null)
+                nameLabel = GetComponentInChildren<TMP_Text>(true);
         }
 
         public void PlayDeathEffect()

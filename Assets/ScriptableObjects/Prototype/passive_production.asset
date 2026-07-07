@@ -17,3 +17,8 @@ MonoBehaviour:
   description: More Stardust per second (+1 per level)
   baseCost: 25
   costScale: 1.55
+  maxLevel: 0
+  upgradePrerequisites:
+  - upgradeType: 0
+    requiredLevel: 5
+  statPrerequisites: []

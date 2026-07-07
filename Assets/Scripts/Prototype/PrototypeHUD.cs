@@ -21,6 +21,8 @@ namespace Universes.Prototype
         [SerializeField] private RectTransform dnaCollector;
         [SerializeField] private Button createStarButton;
         [SerializeField] private Text createStarButtonText;
+        [SerializeField] private Button createPlanetButton;
+        [SerializeField] private Text createPlanetButtonText;
         [SerializeField] private Button collapseUniverseButton;
         [SerializeField] private PrototypeCollapsePanel collapsePanel;
         [SerializeField] private PrototypeStarSystemEndPanel starSystemEndPanel;
@@ -62,6 +64,7 @@ namespace Universes.Prototype
             }
 
             createStarButton?.onClick.AddListener(OnPrimaryActionClicked);
+            createPlanetButton?.onClick.AddListener(OnCreatePlanetClicked);
             collapseUniverseButton?.onClick.AddListener(() => controller.TryCollapseUniverse());
 
             controller.OnStateChanged += Refresh;
@@ -102,6 +105,14 @@ namespace Universes.Prototype
                 controller.TryCreatePlanet();
             else
                 controller.TryCreateNewStar();
+        }
+
+        private void OnCreatePlanetClicked()
+        {
+            if (controller == null)
+                return;
+
+            controller.TryCreatePlanet();
         }
 
         private void OnUniverseCollapsed(bool manualCollapse)
@@ -147,16 +158,16 @@ namespace Universes.Prototype
             if (controller == null)
                 return;
 
-            var single = controller.IsSingleStarMode;
+            var usesEntropy = PrototypeGameplayFeatures.UsesEntropy(GetGameplayMode());
             if (entropyPanelRoot != null)
-                entropyPanelRoot.SetActive(!single);
+                entropyPanelRoot.SetActive(usesEntropy);
             else if (entropyText != null)
-                entropyText.transform.parent?.gameObject.SetActive(!single);
+                entropyText.transform.parent?.gameObject.SetActive(usesEntropy);
 
             if (collapseUniverseButton != null)
-                collapseUniverseButton.gameObject.SetActive(!single);
+                collapseUniverseButton.gameObject.SetActive(PrototypeGameplayFeatures.UsesUniverseCollapse(GetGameplayMode()));
 
-            if (blackHoleStatusText != null && single)
+            if (blackHoleStatusText != null && !PrototypeGameplayFeatures.UsesBlackHoles(GetGameplayMode()))
                 blackHoleStatusText.text = string.Empty;
         }
 
@@ -170,7 +181,7 @@ namespace Universes.Prototype
             }
 
             RefreshStatsLive();
-            if (!controller.IsSingleStarMode)
+            if (PrototypeGameplayFeatures.UsesBlackHoles(GetGameplayMode()))
                 RefreshBlackHoleStatus();
         }
 
@@ -192,7 +203,7 @@ namespace Universes.Prototype
             if (universeDnaText != null)
                 universeDnaText.text = $"Universe DNA: {controller.Prestige.UniverseDna:0}";
 
-            if (!controller.IsSingleStarMode)
+            if (PrototypeGameplayFeatures.UsesEntropy(GetGameplayMode()))
                 RefreshEntropy();
 
             RefreshStatsLive();
@@ -201,7 +212,7 @@ namespace Universes.Prototype
 
         private void RefreshEntropy()
         {
-            if (controller == null || controller.IsSingleStarMode)
+            if (controller == null || !PrototypeGameplayFeatures.UsesEntropy(GetGameplayMode()))
                 return;
 
             var entropy = controller.Entropy;
@@ -223,7 +234,8 @@ namespace Universes.Prototype
 
         private void RefreshBlackHoleStatus()
         {
-            if (blackHoleStatusText == null || controller == null || controller.IsSingleStarMode)
+            if (blackHoleStatusText == null || controller == null ||
+                !PrototypeGameplayFeatures.UsesBlackHoles(GetGameplayMode()))
                 return;
 
             if (controller.ActiveBlackHoleCount > 0)
@@ -267,8 +279,7 @@ namespace Universes.Prototype
                 }
                 else
                 {
-                    createStarButton.interactable = canPlay &&
-                                                    controller.Stardust >= PrototypeGameController.CreateStarCost;
+                    createStarButton.interactable = canPlay && controller.CanCreateNewStar(out _);
                 }
             }
 
@@ -284,12 +295,48 @@ namespace Universes.Prototype
                 }
                 else
                 {
-                    createStarButtonText.text = $"Create New Star ({PrototypeGameController.CreateStarCost})";
+                    var createCost = controller.GetCreateStarCost();
+                    createStarButtonText.text = controller.CanCreateNewStar(out var reason)
+                        ? $"Buy Star ({createCost:0})"
+                        : $"Buy Star ({reason})";
                 }
             }
 
+            if (createPlanetButton != null)
+            {
+                createPlanetButton.gameObject.SetActive(!controller.IsSingleStarMode);
+                var manager = controller.PlanetManager;
+                var createCost = manager != null && manager.IsInitialized
+                    ? manager.GetCreatePlanetCost()
+                    : controller.SingleStarBalance.createPlanetCost;
+                var canCreatePlanet = canPlay && controller.SelectedStar != null &&
+                                      manager != null && manager.IsInitialized &&
+                                      manager.HasOpenSlot() &&
+                                      controller.Stardust >= createCost;
+                createPlanetButton.interactable = canCreatePlanet;
+            }
+
+            if (createPlanetButtonText != null)
+            {
+                var manager = controller.PlanetManager;
+                var createCost = manager != null && manager.IsInitialized
+                    ? manager.GetCreatePlanetCost()
+                    : controller.SingleStarBalance.createPlanetCost;
+                var starName = controller.SelectedStar != null ? controller.SelectedStar.StarName : "Select Star";
+                createPlanetButtonText.text = $"Create Planet: {starName} ({createCost:0})";
+            }
+
             if (collapseUniverseButton != null)
-                collapseUniverseButton.interactable = canPlay && !controller.IsSingleStarMode;
+                collapseUniverseButton.interactable = canPlay &&
+                                                      PrototypeGameplayFeatures.UsesUniverseCollapse(GetGameplayMode());
+        }
+
+        private PrototypeGameplayMode GetGameplayMode()
+        {
+            if (controller == null)
+                return PrototypeGameplayMode.SingleStarSystemAge;
+
+            return controller.GameplayMode;
         }
 
         private void RefreshStatsLive()
@@ -321,7 +368,28 @@ namespace Universes.Prototype
                 return;
             }
 
-            if (controller.HasActiveStar)
+            if (!controller.IsSingleStarMode && controller.HasActiveStar)
+            {
+                var lines = new System.Text.StringBuilder();
+                lines.AppendLine($"Stars: {controller.ActiveStarCount}/{controller.MaxStarSlots}  |  Passive: +{controller.GetTotalPassivePerSecond()}/s");
+                foreach (var star in controller.Stars)
+                {
+                    if (star == null || !star.IsInteractable)
+                        continue;
+
+                    var maxPlanets = controller.PlanetManager != null
+                        ? controller.PlanetManager.GetMaxPlanets()
+                        : PrototypePlanetBalance.BaseMaxPlanets;
+                    var selected = star == controller.SelectedStar ? "* " : "";
+                    lines.AppendLine(
+                        $"{selected}{star.StarName}: {star.Stage}, Age {star.StarAge}/{controller.GetMaxStarHealth()}  |  " +
+                        $"Click +{controller.GetClickReward(star)}  |  Passive +{controller.GetPassivePerSecond(star)}/s  |  " +
+                        $"Planets {controller.GetPlanetCountForStar(star)}/{maxPlanets}");
+                }
+
+                statsText.text = lines.ToString().TrimEnd();
+            }
+            else if (controller.HasActiveStar)
             {
                 statsText.text =
                     $"Stars: {controller.ActiveStarCount}  |  Primary Age: {controller.StarAge}/100 ({controller.Stage})\n" +

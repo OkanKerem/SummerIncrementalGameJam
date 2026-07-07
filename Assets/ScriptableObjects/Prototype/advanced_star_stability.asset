@@ -10,15 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: b4e7f2a83c1d9e5647089fab2c3d5e61, type: 3}
-  m_Name: supernova_bonus
+  m_Name: advanced_star_stability
   m_EditorClassIdentifier: 
-  upgradeType: 3
-  displayName: Supernova Bonus
-  description: +15 Supernova reward per level
-  baseCost: 40
-  costScale: 1.55
+  upgradeType: 12
+  displayName: Advanced Star Stability
+  description: Further slows star aging after basic stability is developed.
+  baseCost: 140
+  costScale: 1.8
   maxLevel: 0
-  upgradePrerequisites: []
-  statPrerequisites:
-  - statType: 4
-    requiredValue: 1
+  upgradePrerequisites:
+  - upgradeType: 2
+    requiredLevel: 5
+  statPrerequisites: []

@@ -105,17 +105,25 @@ namespace Universes.Prototype
         {
             var level = _controller.Upgrades.GetLevel(definition);
             var cost = _controller.Upgrades.GetCost(definition);
+            var unlocked = definition.ArePrerequisitesMet(_controller, out var requirementText);
 
             if (titleText != null)
                 titleText.text = $"{definition.displayName} (Lv {level})";
 
+            if (descriptionText != null)
+            {
+                descriptionText.text = unlocked || string.IsNullOrWhiteSpace(requirementText)
+                    ? definition.description
+                    : $"{definition.description}\nLocked: Requires {requirementText}";
+            }
+
             if (costText != null)
-                costText.text = $"Buy ({cost:0})";
+                costText.text = unlocked ? $"Buy ({cost:0})" : "Locked";
 
             if (buyButton != null)
             {
                 var atMax = definition.maxLevel > 0 && level >= definition.maxLevel;
-                var canBuy = !_controller.IsRunEnded && !atMax && _controller.Stardust >= cost;
+                var canBuy = unlocked && !_controller.IsRunEnded && !atMax && _controller.Stardust >= cost;
                 buyButton.interactable = canBuy;
                 if (buttonImage != null)
                     buttonImage.color = canBuy ? enabledButtonColor : disabledButtonColor;

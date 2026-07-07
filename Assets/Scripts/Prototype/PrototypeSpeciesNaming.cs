@@ -29,6 +29,16 @@ namespace Universes.Prototype
             "Concord", "Assembly", "Accord", "Collective", "Union", "Compact"
         };
 
+        private static readonly string[] StarPrefixes =
+        {
+            "Sol", "Aster", "Helio", "Cael", "Vey", "Oris", "Luma", "Siri", "Nara", "Eos"
+        };
+
+        private static readonly string[] StarSuffixes =
+        {
+            "ion", "ara", "eth", "os", "iel", "or", "is", "une", "ar", "ix"
+        };
+
         private static readonly string[] FlavorTemplates =
         {
             "The {0} first emerged beneath the changing skies of {1}.",
@@ -39,6 +49,9 @@ namespace Universes.Prototype
 
         public static string GeneratePlanetName(int planetId) =>
             $"{Pick(PlanetPrefixes)}{Pick(PlanetSuffixes)}-{planetId:00}";
+
+        public static string GenerateStarName(int starId) =>
+            $"{Pick(StarPrefixes)}{Pick(StarSuffixes)}-{starId:00}";
 
         public static string GenerateSpeciesName() =>
             $"{Pick(SpeciesPrefixes)}{Pick(SpeciesSuffixes)}";

@@ -17,3 +17,8 @@ MonoBehaviour:
   description: Planets generate more DNA Potential over time
   baseCost: 20
   costScale: 1.5
+  maxLevel: 0
+  upgradePrerequisites: []
+  statPrerequisites:
+  - statType: 3
+    requiredValue: 1

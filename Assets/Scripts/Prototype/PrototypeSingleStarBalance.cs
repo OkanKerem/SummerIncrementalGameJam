@@ -43,6 +43,7 @@ namespace Universes.Prototype
         public PrototypePlanetBalanceConfig planets = new();
         public PrototypeCivilizationBalanceConfig civilization = new();
         public PrototypeUpgradeBalanceConfig upgrades = new();
+        public PrototypeMultiStarBalanceConfig multiStar = new();
 
         private void OnEnable() => EnsureNestedConfigs();
 
@@ -52,6 +53,7 @@ namespace Universes.Prototype
             planets ??= new PrototypePlanetBalanceConfig();
             civilization ??= new PrototypeCivilizationBalanceConfig();
             upgrades ??= new PrototypeUpgradeBalanceConfig();
+            multiStar ??= new PrototypeMultiStarBalanceConfig();
         }
 
         public static PrototypeSingleStarBalance CreateRuntimeDefault()

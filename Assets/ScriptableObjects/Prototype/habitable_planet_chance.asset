@@ -17,3 +17,8 @@ MonoBehaviour:
   description: New planets are more likely to support life
   baseCost: 20
   costScale: 1.5
+  maxLevel: 0
+  upgradePrerequisites:
+  - upgradeType: 5
+    requiredLevel: 1
+  statPrerequisites: []

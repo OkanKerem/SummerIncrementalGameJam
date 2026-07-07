@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 
 namespace Universes.Prototype
@@ -12,6 +13,7 @@ namespace Universes.Prototype
         [SerializeField] private float popScalePeak = 1.38f;
         [SerializeField] private float popDuration = 0.28f;
         [SerializeField] private float popGlowBurst = 1.55f;
+        [SerializeField] private TMP_Text nameLabel;
 
         private PrototypeGameController _controller;
         private CircleCollider2D _collider;
@@ -26,6 +28,7 @@ namespace Universes.Prototype
         private bool _supernovaStarted;
         private float _ageFraction;
 
+        public string StarName { get; private set; }
         public int StarAge { get; private set; }
         public int MaxStarAge { get; private set; } = 100;
         public bool HasReachedMaxAge => StarAge >= MaxStarAge;
@@ -35,6 +38,8 @@ namespace Universes.Prototype
         private bool _inputEnabled = true;
         private bool _driftEnabled = true;
         private Vector2 _driftVelocity;
+
+        public int StarId { get; private set; }
 
         private void Awake()
         {
@@ -70,6 +75,18 @@ namespace Universes.Prototype
                 CachePrefabTransforms();
 
             RefreshVisual();
+        }
+
+        public void SetStarName(string starName)
+        {
+            StarName = starName;
+            RefreshNameLabel();
+        }
+
+        public void ConfigureIdentity(int starId, string starName)
+        {
+            StarId = starId;
+            SetStarName(starName);
         }
 
         public void ConfigureMaxAge(int maxAge) => MaxStarAge = Mathf.Max(1, maxAge);
@@ -175,6 +192,36 @@ namespace Universes.Prototype
                 if (_popRoutine == null && Stage != PrototypeStarStage.Supernova)
                     glowRenderer.transform.localScale = _prefabGlowLocalScale;
             }
+
+            RefreshNameLabel();
+        }
+
+        private void RefreshNameLabel()
+        {
+            ResolveNameLabel();
+
+            if (nameLabel == null)
+                return;
+
+            var hasName = !string.IsNullOrWhiteSpace(StarName);
+            nameLabel.enabled = hasName;
+            if (!hasName)
+                return;
+
+            nameLabel.text = StarName;
+        }
+
+        private void ResolveNameLabel()
+        {
+            if (nameLabel != null)
+                return;
+
+            var existing = transform.Find("StarNameLabel");
+            if (existing != null)
+                nameLabel = existing.GetComponent<TMP_Text>();
+
+            if (nameLabel == null)
+                nameLabel = GetComponentInChildren<TMP_Text>(true);
         }
 
         public void PlayClickPop()

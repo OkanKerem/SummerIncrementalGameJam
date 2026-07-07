@@ -444,7 +444,20 @@ namespace Universes.Prototype
     {
         [Min(0)] public int supernovaBonusPerLevel = 15;
         [Min(0f)] public float starStabilityAgeGainReductionPerLevel = 0.25f;
+        [Min(0f)] public float advancedStarStabilityAgeGainReductionPerLevel = 0.15f;
         [Min(0f)] public float baseClickCollectRadius = 1.1f;
         [Min(0f)] public float clickCollectRadiusPerLevel = 0.45f;
+    }
+
+    [Serializable]
+    public class PrototypeMultiStarBalanceConfig
+    {
+        [Min(1)] public int initialStarSlots = 1;
+        [Min(1)] public int maxStarSlots = 5;
+        [Min(0)] public double createStarBaseCost = 75;
+        [Min(1)] public double createStarCostScale = 1.65;
+        [Min(0)] public int supernovaStardustBonus = 50;
+        [Range(0f, 1f)] public float supernovaPlanetDestroyChance = 0.35f;
+        [Min(0f)] public float supernovaPlanetDamage = 45f;
     }
 }

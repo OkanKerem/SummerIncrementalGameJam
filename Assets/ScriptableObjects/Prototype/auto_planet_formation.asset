@@ -17,3 +17,8 @@ MonoBehaviour:
   description: Chance to spawn a free random planet over time
   baseCost: 20
   costScale: 1.5
+  maxLevel: 0
+  upgradePrerequisites:
+  - upgradeType: 5
+    requiredLevel: 2
+  statPrerequisites: []

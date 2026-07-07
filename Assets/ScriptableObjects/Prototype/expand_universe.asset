@@ -14,8 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 10
   displayName: Expand Universe
-  description: 'Unlock Step 2: drift through a wider cosmos with many stars, entropy,
-    particle collection, black holes, and universe collapse.'
+  description: 'Unlock Step 2: Multi-Star System Age with star slots, buying new stars,
+    independent star lifecycles, and planets around selected stars.'
+  upgradePrerequisites: []
+  statPrerequisites: []
   baseCost: 500
   costScale: 1
   maxLevel: 1

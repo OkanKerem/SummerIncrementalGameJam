@@ -20,7 +20,7 @@ MonoBehaviour:
   basePassivePerSecond: 1
   createPlanetCost: 30
   baseMaxPlanets: 3
-  baseOrbitRadius: 1
+  baseOrbitRadius: 1.5
   orbitRadiusStep: 1
   orbitSpeed: 28
   basePlanetClickDamage: 8

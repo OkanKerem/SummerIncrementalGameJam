@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 
 namespace Universes.Prototype
@@ -8,6 +9,8 @@ namespace Universes.Prototype
     {
         [SerializeField] private float popScalePeak = 1.25f;
         [SerializeField] private float popDuration = 0.18f;
+        [SerializeField] private TMP_Text nameLabel;
+        [SerializeField] private Vector2 fallbackOrbitEllipseScale = new(1.25f, 0.58f);
 
         private PrototypePlanet _planet;
         private PrototypePlanetManager _manager;
@@ -97,6 +100,8 @@ namespace Universes.Prototype
 
             if (_collider != null)
                 _collider.enabled = _planet.IsAlive;
+
+            RefreshNameLabel();
         }
 
         private void UpdatePosition()
@@ -105,8 +110,42 @@ namespace Universes.Prototype
                 return;
 
             var rad = _planet.OrbitAngle * Mathf.Deg2Rad;
-            var offset = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad), 0f) * _planet.OrbitRadius;
+            var offset = _manager != null
+                ? _manager.GetOrbitOffset(_planet)
+                : new Vector3(
+                    Mathf.Cos(rad) * _planet.OrbitRadius * fallbackOrbitEllipseScale.x,
+                    Mathf.Sin(rad) * _planet.OrbitRadius * fallbackOrbitEllipseScale.y,
+                    0f);
             transform.position = _orbitCenter.position + offset;
+            RefreshNameLabel();
+        }
+
+        private void RefreshNameLabel()
+        {
+            ResolveNameLabel();
+
+            if (nameLabel == null || _planet == null)
+                return;
+
+            var hasRealName = !string.IsNullOrWhiteSpace(_planet.PlanetName);
+            nameLabel.enabled = hasRealName;
+            if (!hasRealName)
+                return;
+
+            nameLabel.text = _planet.PlanetName;
+        }
+
+        private void ResolveNameLabel()
+        {
+            if (nameLabel != null)
+                return;
+
+            var existing = transform.Find("PlanetNameLabel_TMP");
+            if (existing != null)
+                nameLabel = existing.GetComponent<TMP_Text>();
+
+            if (nameLabel == null)
+                nameLabel = GetComponentInChildren<TMP_Text>(true);
         }
 
         private void OnMouseDown()

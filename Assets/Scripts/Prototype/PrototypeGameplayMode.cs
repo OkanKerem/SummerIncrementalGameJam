@@ -3,6 +3,7 @@ namespace Universes.Prototype
     public enum PrototypeGameplayMode
     {
         SingleStarSystemAge,
+        MultiStarSystemAge,
         FullCosmic
     }
 
@@ -12,10 +13,10 @@ namespace Universes.Prototype
             mode == PrototypeGameplayMode.SingleStarSystemAge;
 
         public static bool UsesEntropy(PrototypeGameplayMode mode) =>
-            mode == PrototypeGameplayMode.FullCosmic;
+            mode == PrototypeGameplayMode.MultiStarSystemAge || mode == PrototypeGameplayMode.FullCosmic;
 
         public static bool UsesMultiStar(PrototypeGameplayMode mode) =>
-            mode == PrototypeGameplayMode.FullCosmic;
+            mode == PrototypeGameplayMode.MultiStarSystemAge || mode == PrototypeGameplayMode.FullCosmic;
 
         public static bool UsesBlackHoles(PrototypeGameplayMode mode) =>
             mode == PrototypeGameplayMode.FullCosmic;
@@ -26,6 +27,6 @@ namespace Universes.Prototype
         public static bool UsesUniverseCollapse(PrototypeGameplayMode mode) =>
             mode == PrototypeGameplayMode.FullCosmic;
 
-        public const bool Step2ExpansionAvailable = false;
+        public const bool Step2ExpansionAvailable = true;
     }
 }

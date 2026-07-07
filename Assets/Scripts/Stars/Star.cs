@@ -7,6 +7,7 @@ namespace Universes.Stars
     public class Star
     {
         public int Id { get; }
+        public string Name { get; }
         public Vector2 Position { get; }
         public float Age { get; set; }
         public StarStage Stage => StarStageUtility.FromAge(Age);
@@ -22,6 +23,7 @@ namespace Universes.Stars
         public Star(int id, Vector2 position)
         {
             Id = id;
+            Name = Universes.Core.CosmicNameGenerator.GenerateStarName(id);
             Position = position;
         }
 
