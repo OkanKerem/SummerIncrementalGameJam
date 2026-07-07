@@ -18,6 +18,8 @@ namespace Universes.Prototype
         public const float BlackHoleLifetimeSeconds = 45f;
         public const float BlackHoleEntropyPerSecond = 0.42f;
         public const float BlackHoleDnaIntervalSeconds = 4f;
+        public const float BlackHoleInitialDnaTimerMultiplier = 0.5f;
+        public const float BlackHoleDnaFragmentChance = 0.35f;
         public const float BlackHoleParticlePullRadius = 2.5f;
         public const float BlackHoleParticleConsumeRadius = 0.35f;
         public const float BlackHoleConsumeDnaChance = 0.15f;

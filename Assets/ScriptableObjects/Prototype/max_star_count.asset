@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4e7f2a83c1d9e5647089fab2c3d5e61, type: 3}
+  m_Name: max_star_count
+  m_EditorClassIdentifier: 
+  upgradeType: 11
+  displayName: Max Star Count
+  description: Unlocks one additional active star slot per level, up to five stars.
+  baseCost: 180
+  costScale: 2
+  maxLevel: 4
+  upgradePrerequisites:
+  - upgradeType: 0
+    requiredLevel: 5
+  - upgradeType: 1
+    requiredLevel: 2
+  statPrerequisites:
+  - statType: 2
+    requiredValue: 2

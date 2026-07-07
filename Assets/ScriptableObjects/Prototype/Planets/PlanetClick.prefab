@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 5940529053743077331}
   - component: {fileID: 8062468464515607189}
   m_Layer: 0
-  m_Name: VFX_Classic_03
+  m_Name: PlanetClick
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

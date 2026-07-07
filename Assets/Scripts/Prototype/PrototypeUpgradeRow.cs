@@ -42,7 +42,17 @@ namespace Universes.Prototype
 
         private void OnBuyClicked()
         {
-            if (_controller != null && definition != null && _controller.TryPurchaseUpgrade(definition))
+            if (_controller == null || definition == null)
+                return;
+
+            if (definition.upgradeType == PrototypeUpgradeType.ExpandUniverse)
+            {
+                if (_controller.TryExpandUniverse(definition))
+                    Refresh();
+                return;
+            }
+
+            if (_controller.TryPurchaseUpgrade(definition))
                 Refresh();
         }
 
@@ -51,18 +61,69 @@ namespace Universes.Prototype
             if (_controller == null || definition == null)
                 return;
 
+            if (definition.upgradeType == PrototypeUpgradeType.ExpandUniverse)
+            {
+                RefreshExpandUniverseRow();
+                return;
+            }
+
+            RefreshStandardRow();
+        }
+
+        private void RefreshExpandUniverseRow()
+        {
+            var show = _controller.IsSingleStarMode && !_controller.Upgrades.IsUniverseExpanded;
+            gameObject.SetActive(show);
+            if (!show)
+                return;
+
+            if (titleText != null)
+                titleText.text = definition.displayName;
+
+            if (descriptionText != null && !string.IsNullOrEmpty(definition.description))
+                descriptionText.text = definition.description;
+
+            var step2Ready = PrototypeGameplayFeatures.Step2ExpansionAvailable;
+            var cost = _controller.Upgrades.GetCost(definition);
+            var canAfford = _controller.Stardust >= cost;
+
+            if (costText != null)
+            {
+                costText.text = step2Ready ? $"Buy ({cost:0})" : "Soon";
+            }
+
+            if (buyButton != null)
+            {
+                var canBuy = !_controller.IsRunEnded && (step2Ready ? canAfford : true);
+                buyButton.interactable = canBuy;
+                if (buttonImage != null)
+                    buttonImage.color = canBuy ? enabledButtonColor : disabledButtonColor;
+            }
+        }
+
+        private void RefreshStandardRow()
+        {
             var level = _controller.Upgrades.GetLevel(definition);
             var cost = _controller.Upgrades.GetCost(definition);
+            var unlocked = definition.ArePrerequisitesMet(_controller, out var requirementText);
 
             if (titleText != null)
                 titleText.text = $"{definition.displayName} (Lv {level})";
 
+            if (descriptionText != null)
+            {
+                descriptionText.text = unlocked || string.IsNullOrWhiteSpace(requirementText)
+                    ? definition.description
+                    : $"{definition.description}\nLocked: Requires {requirementText}";
+            }
+
             if (costText != null)
-                costText.text = $"Buy ({cost:0})";
+                costText.text = unlocked ? $"Buy ({cost:0})" : "Locked";
 
             if (buyButton != null)
             {
-                var canBuy = !_controller.IsCollapsed && _controller.Stardust >= cost;
+                var atMax = definition.maxLevel > 0 && level >= definition.maxLevel;
+                var canBuy = unlocked && !_controller.IsRunEnded && !atMax && _controller.Stardust >= cost;
                 buyButton.interactable = canBuy;
                 if (buttonImage != null)
                     buttonImage.color = canBuy ? enabledButtonColor : disabledButtonColor;

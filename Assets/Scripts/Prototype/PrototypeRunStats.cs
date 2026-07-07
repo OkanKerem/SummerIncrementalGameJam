@@ -4,7 +4,13 @@ namespace Universes.Prototype
     {
         public double TotalStardustProduced { get; private set; }
         public int TotalStarClicks { get; private set; }
+        public int TotalPlanetClicks { get; private set; }
         public int StarsCreated { get; private set; }
+        public int PlanetsCreated { get; private set; }
+        public int PlanetsDestroyed { get; private set; }
+        public int HighestPlanetCount { get; private set; }
+        public int LifePlanetsReached { get; private set; }
+        public string HighestCivilizationLabel { get; private set; } = "No Life";
         public int SupernovaCount { get; private set; }
         public int StarCollisionCount { get; private set; }
         public int BlackHolesCreated { get; private set; }
@@ -17,7 +23,13 @@ namespace Universes.Prototype
         {
             TotalStardustProduced = 0;
             TotalStarClicks = 0;
+            TotalPlanetClicks = 0;
             StarsCreated = 0;
+            PlanetsCreated = 0;
+            PlanetsDestroyed = 0;
+            HighestPlanetCount = 0;
+            LifePlanetsReached = 0;
+            HighestCivilizationLabel = "No Life";
             SupernovaCount = 0;
             StarCollisionCount = 0;
             BlackHolesCreated = 0;
@@ -34,7 +46,24 @@ namespace Universes.Prototype
         }
 
         public void RecordClick() => TotalStarClicks++;
+        public void RecordPlanetClick() => TotalPlanetClicks++;
         public void RecordStarCreated() => StarsCreated++;
+
+        public void RecordPlanetCreated(int currentCount)
+        {
+            PlanetsCreated++;
+            if (currentCount > HighestPlanetCount)
+                HighestPlanetCount = currentCount;
+        }
+
+        public void RecordPlanetDestroyed() => PlanetsDestroyed++;
+        public void RecordLifePlanet() => LifePlanetsReached++;
+
+        public void RecordHighestCivilization(PrototypeCivilizationStage stage)
+        {
+            HighestCivilizationLabel = PrototypeCivilizationUtility.GetLabel(stage);
+        }
+
         public void RecordSupernova() => SupernovaCount++;
         public void RecordCollision() => StarCollisionCount++;
         public void RecordBlackHole() => BlackHolesCreated++;

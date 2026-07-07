@@ -6,7 +6,15 @@ namespace Universes.Prototype
         PassiveProduction,
         StarStability,
         SupernovaBonus,
-        ClickCollectRadius
+        ClickCollectRadius,
+        MaxPlanetCount,
+        AutoPlanetFormation,
+        PlanetDnaChance,
+        PlanetClickValue,
+        HabitablePlanetChance,
+        ExpandUniverse,
+        MaxStarCount,
+        AdvancedStarStability
     }
 
     public class PrototypeUpgrades
@@ -16,10 +24,16 @@ namespace Universes.Prototype
         public int StarStabilityLevel { get; private set; }
         public int SupernovaBonusLevel { get; private set; }
         public int ClickCollectRadiusLevel { get; private set; }
+        public int MaxPlanetCountLevel { get; private set; }
+        public int AutoPlanetFormationLevel { get; private set; }
+        public int PlanetDnaChanceLevel { get; private set; }
+        public int PlanetClickValueLevel { get; private set; }
+        public int HabitablePlanetChanceLevel { get; private set; }
+        public int UniverseExpandedLevel { get; private set; }
+        public int MaxStarCountLevel { get; private set; }
+        public int AdvancedStarStabilityLevel { get; private set; }
 
-        public const int SupernovaBonusPerLevel = 15;
-        public const float BaseClickCollectRadius = 1.1f;
-        public const float ClickCollectRadiusPerLevel = 0.45f;
+        public bool IsUniverseExpanded => UniverseExpandedLevel > 0;
 
         public int GetLevel(PrototypeUpgradeDefinition definition) =>
             definition != null ? GetLevel(definition.upgradeType) : 0;
@@ -32,6 +46,14 @@ namespace Universes.Prototype
                 PrototypeUpgradeType.StarStability => StarStabilityLevel,
                 PrototypeUpgradeType.SupernovaBonus => SupernovaBonusLevel,
                 PrototypeUpgradeType.ClickCollectRadius => ClickCollectRadiusLevel,
+                PrototypeUpgradeType.MaxPlanetCount => MaxPlanetCountLevel,
+                PrototypeUpgradeType.AutoPlanetFormation => AutoPlanetFormationLevel,
+                PrototypeUpgradeType.PlanetDnaChance => PlanetDnaChanceLevel,
+                PrototypeUpgradeType.PlanetClickValue => PlanetClickValueLevel,
+                PrototypeUpgradeType.HabitablePlanetChance => HabitablePlanetChanceLevel,
+                PrototypeUpgradeType.ExpandUniverse => UniverseExpandedLevel,
+                PrototypeUpgradeType.MaxStarCount => MaxStarCountLevel,
+                PrototypeUpgradeType.AdvancedStarStability => AdvancedStarStabilityLevel,
                 _ => 0
             };
 
@@ -41,6 +63,10 @@ namespace Universes.Prototype
         public bool TryPurchase(PrototypeUpgradeDefinition definition, ref double stardust)
         {
             if (definition == null)
+                return false;
+
+            var currentLevel = GetLevel(definition);
+            if (definition.maxLevel > 0 && currentLevel >= definition.maxLevel)
                 return false;
 
             var cost = GetCost(definition);
@@ -55,16 +81,29 @@ namespace Universes.Prototype
                 case PrototypeUpgradeType.StarStability: StarStabilityLevel++; break;
                 case PrototypeUpgradeType.SupernovaBonus: SupernovaBonusLevel++; break;
                 case PrototypeUpgradeType.ClickCollectRadius: ClickCollectRadiusLevel++; break;
+                case PrototypeUpgradeType.MaxPlanetCount: MaxPlanetCountLevel++; break;
+                case PrototypeUpgradeType.AutoPlanetFormation: AutoPlanetFormationLevel++; break;
+                case PrototypeUpgradeType.PlanetDnaChance: PlanetDnaChanceLevel++; break;
+                case PrototypeUpgradeType.PlanetClickValue: PlanetClickValueLevel++; break;
+                case PrototypeUpgradeType.HabitablePlanetChance: HabitablePlanetChanceLevel++; break;
+                case PrototypeUpgradeType.ExpandUniverse: UniverseExpandedLevel++; break;
+                case PrototypeUpgradeType.MaxStarCount: MaxStarCountLevel++; break;
+                case PrototypeUpgradeType.AdvancedStarStability: AdvancedStarStabilityLevel++; break;
             }
 
             return true;
         }
 
-        public float GetAgeGainMultiplier() =>
-            1f / (1f + StarStabilityLevel * 0.25f);
+        public float GetAgeGainMultiplier(PrototypeUpgradeBalanceConfig balance) =>
+            1f / (1f +
+                  StarStabilityLevel * (balance ?? new PrototypeUpgradeBalanceConfig()).starStabilityAgeGainReductionPerLevel +
+                  AdvancedStarStabilityLevel * (balance ?? new PrototypeUpgradeBalanceConfig()).advancedStarStabilityAgeGainReductionPerLevel);
 
-        public float GetClickCollectRadius() =>
-            BaseClickCollectRadius + ClickCollectRadiusLevel * ClickCollectRadiusPerLevel;
+        public float GetClickCollectRadius(PrototypeUpgradeBalanceConfig balance)
+        {
+            balance ??= new PrototypeUpgradeBalanceConfig();
+            return balance.baseClickCollectRadius + ClickCollectRadiusLevel * balance.clickCollectRadiusPerLevel;
+        }
 
         public void Reset()
         {
@@ -73,6 +112,17 @@ namespace Universes.Prototype
             StarStabilityLevel = 0;
             SupernovaBonusLevel = 0;
             ClickCollectRadiusLevel = 0;
+            MaxPlanetCountLevel = 0;
+            AutoPlanetFormationLevel = 0;
+            PlanetDnaChanceLevel = 0;
+            PlanetClickValueLevel = 0;
+            HabitablePlanetChanceLevel = 0;
+            UniverseExpandedLevel = 0;
+            MaxStarCountLevel = 0;
+            AdvancedStarStabilityLevel = 0;
         }
+
+        public void SetUniverseExpanded(bool expanded) =>
+            UniverseExpandedLevel = expanded ? 1 : 0;
     }
 }

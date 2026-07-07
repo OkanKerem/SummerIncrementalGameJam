@@ -68,7 +68,7 @@ namespace Universes.Prototype
 
             if (buyButton != null)
             {
-                var canBuy = _controller.IsCollapsed && !maxed && prestige.UniverseDna >= cost;
+                var canBuy = _controller.IsRunEnded && !maxed && prestige.UniverseDna >= cost;
                 buyButton.interactable = canBuy;
                 if (buttonImage != null)
                     buttonImage.color = canBuy ? enabledButtonColor : disabledButtonColor;

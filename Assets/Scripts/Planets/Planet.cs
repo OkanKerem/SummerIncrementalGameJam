@@ -7,6 +7,7 @@ namespace Universes.Planets
     public class Planet
     {
         public int Id { get; }
+        public string Name { get; }
         public int HostStarId { get; }
         public bool HasLife { get; set; }
         public bool IsUnstable { get; set; }
@@ -17,6 +18,7 @@ namespace Universes.Planets
         public Planet(int id, int hostStarId, int orbitIndex, float orbitAngle, float orbitRadius)
         {
             Id = id;
+            Name = Universes.Core.CosmicNameGenerator.GeneratePlanetName(id);
             HostStarId = hostStarId;
             OrbitIndex = orbitIndex;
             OrbitAngle = orbitAngle;

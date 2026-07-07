@@ -1,0 +1,196 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 69661fbca7b5bf54495c0c21e6a66acc, type: 3}
+  m_Name: SingleStarBalance
+  m_EditorClassIdentifier: 
+  maxStarHealth: 200
+  agePerClick: 1
+  agePerPassiveTick: 1
+  passiveTickInterval: 1
+  baseClickReward: 3
+  basePassivePerSecond: 1
+  createPlanetCost: 30
+  baseMaxPlanets: 3
+  baseOrbitRadius: 1.5
+  orbitRadiusStep: 1
+  orbitSpeed: 28
+  basePlanetClickDamage: 8
+  planetSpawnDelay: 1
+  autoFormationCheckInterval: 3
+  baseAutoFormationChance: 0.05
+  autoFormationChancePerLevel: 0.1
+  civilizationTickInterval: 2.5
+  lifeProgressBase: 0.08
+  baseHabitableRollBonus: 0.05
+  habitableChancePerLevel: 0.06
+  dnaTickInterval: 1
+  planetDnaChancePerLevel: 0.012
+  planetClickValuePerLevel: 1.5
+  species:
+    minimumTraitValue: 0
+    maximumTraitValue: 100
+    lowIntelligenceThreshold: 30
+    highIntelligenceThreshold: 70
+    lowAggressionThreshold: 30
+    highAggressionThreshold: 70
+    lowIntelligenceDnaMultiplier: 0.9
+    mediumIntelligenceDnaMultiplier: 1
+    highIntelligenceDnaMultiplier: 1.1
+    lowIntelligenceCivilizationSpeedMultiplier: 1
+    mediumIntelligenceCivilizationSpeedMultiplier: 1.05
+    highIntelligenceCivilizationSpeedMultiplier: 1.1
+    lowIntelligenceClickStardustMultiplier: 1
+    mediumIntelligenceClickStardustMultiplier: 1
+    highIntelligenceClickStardustMultiplier: 1.05
+    lowAggressionDnaMultiplier: 1
+    mediumAggressionDnaMultiplier: 1.05
+    highAggressionDnaMultiplier: 1.1
+    lowAggressionCivilizationSpeedMultiplier: 1
+    mediumAggressionCivilizationSpeedMultiplier: 1.02
+    highAggressionCivilizationSpeedMultiplier: 1.05
+    lowAggressionClickStardustMultiplier: 1
+    mediumAggressionClickStardustMultiplier: 1.05
+    highAggressionClickStardustMultiplier: 1.1
+    selfDamageMinimumStage: 5
+    selfDestructionMinimumStage: 5
+    mediumAggressionSelfDamageChance: 0.0025
+    highAggressionSelfDamageChance: 0.01
+    highAggressionSelfDestructionChance: 0.001
+    aggressionSelfDamageAmount: 4
+    selfDestructionRegressToStage: 1
+  planets:
+    fallbackBaseDurability: 100
+    fallbackBaseClickReward: 1
+    planetTypes:
+    - planetType: 0
+      baseClickReward: 3
+      habitabilityValue: 0.55
+      dnaChance: 0.12
+      baseDurability: 100
+      canCivilize: 1
+      planetTypeWeight: 18
+    - planetType: 1
+      baseClickReward: 2
+      habitabilityValue: 0.85
+      dnaChance: 0.15
+      baseDurability: 90
+      canCivilize: 1
+      planetTypeWeight: 14
+    - planetType: 2
+      baseClickReward: 6
+      habitabilityValue: 0.15
+      dnaChance: 0.08
+      baseDurability: 70
+      canCivilize: 0
+      planetTypeWeight: 12
+    - planetType: 3
+      baseClickReward: 2
+      habitabilityValue: 0.35
+      dnaChance: 0.1
+      baseDurability: 120
+      canCivilize: 1
+      planetTypeWeight: 12
+    - planetType: 4
+      baseClickReward: 7
+      habitabilityValue: 0
+      dnaChance: 0.05
+      baseDurability: 110
+      canCivilize: 0
+      planetTypeWeight: 10
+    - planetType: 5
+      baseClickReward: 4
+      habitabilityValue: 0.2
+      dnaChance: 0.28
+      baseDurability: 80
+      canCivilize: 1
+      planetTypeWeight: 8
+    - planetType: 6
+      baseClickReward: 8
+      habitabilityValue: 0.4
+      dnaChance: 0.35
+      baseDurability: 55
+      canCivilize: 1
+      planetTypeWeight: 4
+    - planetType: 7
+      baseClickReward: 3
+      habitabilityValue: 0.45
+      dnaChance: 0.1
+      baseDurability: 95
+      canCivilize: 1
+      planetTypeWeight: 12
+    - planetType: 8
+      baseClickReward: 3
+      habitabilityValue: 0.9
+      dnaChance: 0.18
+      baseDurability: 85
+      canCivilize: 1
+      planetTypeWeight: 10
+    initialLifeChanceMultiplier: 0.5
+    lifeDnaChanceMultiplier: 1.25
+    civilizationDnaChanceMultiplier: 0.05
+    baseDnaPotentialAmount: 1
+    yellowStarHabitabilityBonus: 0.1
+    orangeStarHabitabilityBonus: 0.05
+    unstableStarHabitabilityBonus: -0.1
+    yellowStarCivilizationSpeedMultiplier: 1.1
+    orangeStarCivilizationSpeedMultiplier: 1
+    redGiantCivilizationSpeedMultiplier: 0.7
+    unstableStarCivilizationSpeedMultiplier: 0.3
+  civilization:
+    stages:
+    - stage: 0
+      stageName: No Life
+      progressRequirement: 1
+      stageDnaValue: 0
+      stageClickBonusMultiplier: 1
+      stageSelfDestructionRiskMultiplier: 0
+    - stage: 1
+      stageName: Life
+      progressRequirement: 1
+      stageDnaValue: 0.2
+      stageClickBonusMultiplier: 1.05
+      stageSelfDestructionRiskMultiplier: 0
+    - stage: 2
+      stageName: Primitive Life
+      progressRequirement: 1
+      stageDnaValue: 0.35
+      stageClickBonusMultiplier: 1.05
+      stageSelfDestructionRiskMultiplier: 0
+    - stage: 3
+      stageName: Tribe
+      progressRequirement: 1
+      stageDnaValue: 0.55
+      stageClickBonusMultiplier: 1.1
+      stageSelfDestructionRiskMultiplier: 0
+    - stage: 4
+      stageName: Civilization
+      progressRequirement: 1
+      stageDnaValue: 0.85
+      stageClickBonusMultiplier: 1.1
+      stageSelfDestructionRiskMultiplier: 0.5
+    - stage: 5
+      stageName: Industrial Age
+      progressRequirement: 1
+      stageDnaValue: 1.25
+      stageClickBonusMultiplier: 1.15
+      stageSelfDestructionRiskMultiplier: 1
+    - stage: 6
+      stageName: Space Age
+      progressRequirement: 1
+      stageDnaValue: 2
+      stageClickBonusMultiplier: 1.15
+      stageSelfDestructionRiskMultiplier: 1.5
+  upgrades:
+    supernovaBonusPerLevel: 15
+    starStabilityAgeGainReductionPerLevel: 0.25
+    baseClickCollectRadius: 1.1
+    clickCollectRadiusPerLevel: 0.45

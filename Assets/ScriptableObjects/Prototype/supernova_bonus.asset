@@ -17,3 +17,8 @@ MonoBehaviour:
   description: +15 Supernova reward per level
   baseCost: 40
   costScale: 1.55
+  maxLevel: 0
+  upgradePrerequisites: []
+  statPrerequisites:
+  - statType: 4
+    requiredValue: 1

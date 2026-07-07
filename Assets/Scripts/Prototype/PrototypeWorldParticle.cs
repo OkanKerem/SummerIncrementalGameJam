@@ -15,7 +15,9 @@ namespace Universes.Prototype
 
         private PrototypeCosmicParticleManager _manager;
         private int _value;
+        private float _dnaPotentialAmount;
         private bool _isDna;
+        private bool _isDnaPotential;
         private float _speed;
         private float _spawnDelay;
         private float _currentSpeed;
@@ -55,11 +57,13 @@ namespace Universes.Prototype
             ApplyVisual(PrototypeStarColors.GetStageColor(stage), PrototypeParticleTiers.GetVisualScale(value));
         }
 
-        public void InitDna(PrototypeCosmicParticleManager manager, Vector3 worldPosition)
+        public void InitDna(PrototypeCosmicParticleManager manager, Vector3 worldPosition, float potentialAmount = 0f)
         {
             _manager = manager;
             _value = 1;
+            _dnaPotentialAmount = potentialAmount;
             _isDna = true;
+            _isDnaPotential = potentialAmount > 0f;
             _flightTime = 0f;
             _speed = manager.GetCollectibleFlySpeed(5);
             _currentSpeed = _speed * 0.35f;
@@ -70,7 +74,7 @@ namespace Universes.Prototype
                 spriteRenderer.color = new Color(0.55f, 1f, 0.75f);
 
             if (scaleByValue)
-                transform.localScale = _prefabBaseScale;
+                transform.localScale = _prefabBaseScale * (_isDnaPotential ? 1.1f : 1f);
         }
 
         private void ApplyVisual(Color tint, float valueScale)
@@ -88,7 +92,12 @@ namespace Universes.Prototype
                 return;
 
             if (_isDna)
-                _manager.OnDnaCollected();
+            {
+                if (_isDnaPotential)
+                    _manager.OnDnaPotentialCollected(_dnaPotentialAmount);
+                else
+                    _manager.OnDnaCollected();
+            }
             else
                 _manager.OnStardustCollected(_value, transform.position);
 
@@ -147,7 +156,12 @@ namespace Universes.Prototype
                 if (_pulledByBlackHole && _blackHoleTarget != null)
                     _manager.OnParticleConsumedByBlackHole(this, _blackHoleTarget);
                 else if (_isDna)
-                    _manager.OnDnaCollected();
+                {
+                    if (_isDnaPotential)
+                        _manager.OnDnaPotentialCollected(_dnaPotentialAmount);
+                    else
+                        _manager.OnDnaCollected();
+                }
                 else
                     _manager.OnStardustCollected(_value, transform.position);
 

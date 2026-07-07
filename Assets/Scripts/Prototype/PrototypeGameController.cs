@@ -11,11 +11,15 @@ namespace Universes.Prototype
         public const int BaseAgePerClick = 1;
         public const int BaseAgePerPassiveTick = 1;
         public const int BaseSupernovaBonus = 50;
-        public const int CreateStarCost = 20;
+        public const int DefaultMaxStarHealth = 100;
         public const float PassiveTickInterval = 1f;
 
+        [SerializeField] private PrototypeGameplayMode gameplayMode = PrototypeGameplayMode.SingleStarSystemAge;
         [SerializeField] private PrototypeStarView starViewPrefab;
         [SerializeField] private PrototypeBlackHoleView blackHolePrefab;
+        [SerializeField] private PrototypePlanetManager planetManager;
+        [SerializeField] private PrototypePlanetTypeCatalog planetTypeCatalog;
+        [SerializeField] private PrototypeSingleStarBalance singleStarBalance;
         [SerializeField] private Transform worldRoot;
         [SerializeField] private PrototypeFloatingTextSpawner floatingTextSpawner;
         [SerializeField] private PrototypeCosmicParticleManager particleManager;
@@ -28,15 +32,38 @@ namespace Universes.Prototype
         public PrototypePrestigeState Prestige { get; } = new();
         public PrototypeRunStats RunStats { get; } = new();
         public PrototypeCollapseBreakdown LastCollapseBreakdown { get; private set; }
+        public PrototypeStarSystemBreakdown LastStarSystemBreakdown { get; private set; }
+
+        public PrototypeFloatingTextSpawner FloatingTextSpawner => floatingTextSpawner;
+        public PrototypeCosmicParticleManager ParticleManager => particleManager;
+        public PrototypeSingleStarBalance SingleStarBalance =>
+            singleStarBalance != null ? singleStarBalance : _runtimeSingleStarBalance;
+        public PrototypeGameplayMode GameplayMode => gameplayMode;
+        public bool IsSingleStarMode => PrototypeGameplayFeatures.IsSingleStarMode(gameplayMode);
+        public PrototypePlanetManager PlanetManager => planetManager;
+        public PrototypeStarView CentralStar => _centralStar;
+        public PrototypeStarView SelectedStar { get; private set; }
 
         public double Stardust { get; private set; }
+        public double DnaPotential { get; private set; }
         public int DnaFragments { get; private set; }
         public float Entropy { get; private set; }
         public bool IsCollapsed { get; private set; }
+        public bool IsStarSystemEnded { get; private set; }
+        public bool IsRunEnded => IsSingleStarMode
+            ? IsStarSystemEnded
+            : PrototypeGameplayFeatures.UsesUniverseCollapse(gameplayMode) && IsCollapsed;
         public int ActiveBlackHoleCount => _blackHoles.Count;
 
         public bool HasActiveStar => GetActiveStars().Count > 0;
         public int ActiveStarCount => GetActiveStars().Count;
+        public IReadOnlyList<PrototypeStarView> Stars => _stars;
+        public int MaxStarSlots => PrototypeGameplayFeatures.UsesMultiStar(gameplayMode)
+            ? Mathf.Clamp(SingleStarBalance.multiStar.initialStarSlots + Upgrades.MaxStarCountLevel, 1,
+                SingleStarBalance.multiStar.maxStarSlots)
+            : 1;
+        public int AbsoluteMaxStarSlots => SingleStarBalance.multiStar.maxStarSlots;
+        public bool HasOpenStarSlot => ActiveStarCount < MaxStarSlots && ActiveStarCount < AbsoluteMaxStarSlots;
         public int StarAge => HasActiveStar ? GetActiveStars()[0].StarAge : 0;
         public PrototypeStarStage Stage =>
             HasActiveStar ? GetActiveStars()[0].Stage : PrototypeStarStage.Supernova;
@@ -49,24 +76,56 @@ namespace Universes.Prototype
         public event Action OnDnaGained;
         public event Action<float> OnEntropyChanged;
         public event Action<bool> OnUniverseCollapsed;
+        public event Action OnStarSystemEnded;
+        public event Action<string> OnExpansionFeedback;
+
+        private PrototypeStarView _centralStar;
+        private PrototypeSingleStarBalance _runtimeSingleStarBalance;
 
         private readonly List<PrototypeStarView> _stars = new();
         private readonly List<PrototypeBlackHoleView> _blackHoles = new();
         private readonly Queue<PrototypeStarView> _supernovaQueue = new();
+        private int _nextStarId = 1;
         private float _passiveTimer;
         private bool _processingSupernovas;
 
+        private void Awake()
+        {
+            if (singleStarBalance == null)
+                _runtimeSingleStarBalance = PrototypeSingleStarBalance.CreateRuntimeDefault();
+            else
+                singleStarBalance.EnsureNestedConfigs();
+
+            EnsureWorldRoot();
+            EnsureManagersInitialized();
+        }
+
         private void Start()
         {
-            if (worldRoot == null)
-            {
-                var root = new GameObject("WorldRoot");
-                worldRoot = root.transform;
-            }
-
             if (floatingTextSpawner == null)
                 floatingTextSpawner = FindAnyObjectByType<PrototypeFloatingTextSpawner>();
 
+            PrototypePrestigeSave.Load(Prestige);
+            if (PrototypeExpansionSave.IsExpanded() && IsSingleStarMode)
+                gameplayMode = PrototypeGameplayMode.MultiStarSystemAge;
+
+            if (IsSingleStarMode)
+                StartNewStarSystem();
+            else
+                StartNewUniverse();
+        }
+
+        private void EnsureWorldRoot()
+        {
+            if (worldRoot != null)
+                return;
+
+            var root = new GameObject("WorldRoot");
+            worldRoot = root.transform;
+        }
+
+        private void EnsureManagersInitialized()
+        {
             if (particleManager == null)
             {
                 particleManager = GetComponent<PrototypeCosmicParticleManager>();
@@ -81,27 +140,47 @@ namespace Universes.Prototype
                     effectManager = gameObject.AddComponent<PrototypeParticleEffectManager>();
             }
 
-            PrototypePrestigeSave.Load(Prestige);
-            StartNewUniverse();
+            if (planetManager == null)
+            {
+                planetManager = GetComponent<PrototypePlanetManager>();
+                if (planetManager == null)
+                    planetManager = gameObject.AddComponent<PrototypePlanetManager>();
+            }
+
+            planetManager.Initialize(this, worldRoot, planetTypeCatalog);
         }
 
         private void Update()
         {
-            if (IsCollapsed)
+            if (IsRunEnded)
                 return;
 
             RunStats.SurvivalTimeSeconds += Time.deltaTime;
-            TickEntropy(Time.deltaTime);
-            TryVacuumParticlesOnClick();
-            particleManager?.TickBlackHolePull(_blackHoles);
 
-            TickStarDriftAndCollisions();
-            TickParallelEcho(Time.deltaTime);
+            if (IsSingleStarMode)
+            {
+                planetManager?.Tick(Time.deltaTime);
+            }
+            else if (PrototypeGameplayFeatures.UsesMultiStar(gameplayMode) &&
+                     !PrototypeGameplayFeatures.UsesUniverseCollapse(gameplayMode))
+            {
+                TickEntropy(Time.deltaTime);
+                planetManager?.Tick(Time.deltaTime);
+            }
+            else
+            {
+                TickEntropy(Time.deltaTime);
+                TryVacuumParticlesOnClick();
+                particleManager?.TickBlackHolePull(_blackHoles);
+                TickStarDriftAndCollisions();
+                TickParallelEcho(Time.deltaTime);
+            }
 
             _passiveTimer += Time.deltaTime;
-            while (_passiveTimer >= PassiveTickInterval)
+            var passiveInterval = GetPassiveTickInterval();
+            while (_passiveTimer >= passiveInterval)
             {
-                _passiveTimer -= PassiveTickInterval;
+                _passiveTimer -= passiveInterval;
                 TickPassiveProduction();
             }
 
@@ -110,21 +189,49 @@ namespace Universes.Prototype
 
         public int GetClickReward(PrototypeStarView star)
         {
-            if (IsCollapsed || star == null || !star.IsInteractable)
+            if (IsRunEnded || star == null || !star.IsInteractable)
                 return 0;
 
+            if (IsSingleStarMode)
+                return Mathf.RoundToInt(SingleStarBalance.baseClickReward + Upgrades.ClickPowerLevel);
+
+            var mult = GetProductionMultiplier();
             return Mathf.RoundToInt((PrototypeStarStageUtility.GetClickReward(star.Stage) + Upgrades.ClickPowerLevel) *
-                                    GetProductionMultiplier());
+                                    mult);
         }
 
         public int GetPassivePerSecond(PrototypeStarView star)
         {
-            if (IsCollapsed || star == null || !star.IsInteractable)
+            if (IsRunEnded || star == null || !star.IsInteractable)
                 return 0;
 
+            if (IsSingleStarMode)
+                return Mathf.RoundToInt(SingleStarBalance.basePassivePerSecond + Upgrades.PassiveProductionLevel);
+
+            var mult = GetProductionMultiplier();
             return Mathf.RoundToInt((PrototypeStarStageUtility.GetPassivePerSecond(star.Stage) +
-                                     Upgrades.PassiveProductionLevel) * GetProductionMultiplier());
+                                     Upgrades.PassiveProductionLevel) * mult);
         }
+
+        public float GetPassiveTickInterval() =>
+            PrototypeGameplayFeatures.UsesUniverseCollapse(gameplayMode)
+                ? PassiveTickInterval
+                : SingleStarBalance.passiveTickInterval;
+
+        public int GetAgePerClick() =>
+            PrototypeGameplayFeatures.UsesUniverseCollapse(gameplayMode)
+                ? BaseAgePerClick
+                : SingleStarBalance.agePerClick;
+
+        public int GetAgePerPassiveTick() =>
+            PrototypeGameplayFeatures.UsesUniverseCollapse(gameplayMode)
+                ? BaseAgePerPassiveTick
+                : SingleStarBalance.agePerPassiveTick;
+
+        public int GetMaxStarHealth() =>
+            PrototypeGameplayFeatures.UsesUniverseCollapse(gameplayMode)
+                ? DefaultMaxStarHealth
+                : SingleStarBalance.maxStarHealth;
 
         public int GetTotalPassivePerSecond()
         {
@@ -140,12 +247,97 @@ namespace Universes.Prototype
         public int GetPassivePerSecond() => GetTotalPassivePerSecond();
 
         public int GetSupernovaBonus() =>
-            BaseSupernovaBonus + Upgrades.SupernovaBonusLevel * PrototypeUpgrades.SupernovaBonusPerLevel;
+            BaseSupernovaBonus + Upgrades.SupernovaBonusLevel *
+            SingleStarBalance.upgrades.supernovaBonusPerLevel;
 
-        public float GetClickCollectRadius() => Upgrades.GetClickCollectRadius();
+        public double GetCreateStarCost()
+        {
+            var createdAfterStartingStar = Mathf.Max(0, RunStats.StarsCreated - 1);
+            return SingleStarBalance.multiStar.createStarBaseCost *
+                   Math.Pow(SingleStarBalance.multiStar.createStarCostScale, createdAfterStartingStar);
+        }
+
+        public bool CanCreateNewStar(out string reason)
+        {
+            reason = string.Empty;
+
+            if (!PrototypeGameplayFeatures.UsesMultiStar(gameplayMode))
+            {
+                reason = "Requires Multi-Star System Age";
+                return false;
+            }
+
+            if (IsRunEnded)
+            {
+                reason = "Run ended";
+                return false;
+            }
+
+            if (!HasOpenStarSlot)
+            {
+                reason = MaxStarSlots < AbsoluteMaxStarSlots
+                    ? $"Requires Max Star Count Level {Upgrades.MaxStarCountLevel + 1}"
+                    : $"Star slots full ({ActiveStarCount}/{MaxStarSlots})";
+                return false;
+            }
+
+            if (!MeetsStarCreationRequirement(out reason))
+                return false;
+
+            var cost = GetCreateStarCost();
+            if (Stardust < cost)
+            {
+                reason = $"Needs {cost:0} Stardust";
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool MeetsStarCreationRequirement(out string reason)
+        {
+            reason = string.Empty;
+            var nextStarNumber = RunStats.StarsCreated + 1;
+            if (nextStarNumber <= 2)
+                return true;
+
+            var requiredMaxStarLevel = nextStarNumber - 1;
+            if (Upgrades.MaxStarCountLevel >= requiredMaxStarLevel)
+                return true;
+
+            reason = $"Requires Max Star Count Level {requiredMaxStarLevel}";
+            return false;
+        }
+
+        public int GetPlanetCountForStar(PrototypeStarView star) =>
+            planetManager != null && star != null ? planetManager.GetPlanetCountForStar(star.StarId) : 0;
+
+        public PrototypeStarView GetStarById(int starId)
+        {
+            foreach (var star in _stars)
+            {
+                if (star != null && star.StarId == starId)
+                    return star;
+            }
+
+            return null;
+        }
+
+        public void SelectStar(PrototypeStarView star)
+        {
+            if (star == null || !star.IsInteractable)
+                return;
+
+            SelectedStar = star;
+            planetManager?.BindHostStar(star);
+            NotifyStateChanged();
+        }
+
+        public float GetClickCollectRadius() => Upgrades.GetClickCollectRadius(SingleStarBalance.upgrades);
 
         public float GetEffectiveAgeGainMultiplier() =>
-            Upgrades.GetAgeGainMultiplier() * PrototypePrestigeModifiers.GetAgeGainMultiplier(Prestige);
+            Upgrades.GetAgeGainMultiplier(SingleStarBalance.upgrades) *
+            PrototypePrestigeModifiers.GetAgeGainMultiplier(Prestige);
 
         public float GetEntropyGainMultiplier() => PrototypePrestigeModifiers.GetEntropyMultiplier(Prestige);
 
@@ -159,7 +351,7 @@ namespace Universes.Prototype
 
         public bool TryPurchasePrestigeUpgrade(PrototypePrestigeUpgradeDefinition definition)
         {
-            if (!IsCollapsed || definition == null)
+            if (!IsRunEnded || definition == null)
                 return false;
 
             if (!Prestige.TryPurchase(definition))
@@ -200,7 +392,13 @@ namespace Universes.Prototype
 
         public bool TryPurchaseUpgrade(PrototypeUpgradeDefinition definition)
         {
-            if (IsCollapsed || definition == null)
+            if (IsRunEnded || definition == null)
+                return false;
+
+            if (definition.upgradeType == PrototypeUpgradeType.ExpandUniverse)
+                return TryExpandUniverse(definition);
+
+            if (!definition.ArePrerequisitesMet(this, out _))
                 return false;
 
             var balance = Stardust;
@@ -212,40 +410,161 @@ namespace Universes.Prototype
             return true;
         }
 
+        public bool TryExpandUniverse(PrototypeUpgradeDefinition definition = null)
+        {
+            if (!IsSingleStarMode || IsRunEnded || Upgrades.IsUniverseExpanded)
+                return false;
+
+            if (definition == null)
+                return false;
+
+            var balance = Stardust;
+            if (!Upgrades.TryPurchase(definition, ref balance))
+                return false;
+
+            Stardust = balance;
+            ApplyUniverseExpansion();
+            OnStateChanged?.Invoke();
+            return true;
+        }
+
+        private void ApplyUniverseExpansion()
+        {
+            PrototypeExpansionSave.SetExpanded(true);
+            gameplayMode = PrototypeGameplayMode.MultiStarSystemAge;
+            StartNewUniverse();
+            OnExpansionFeedback?.Invoke("The system expands! Welcome to Step 2: Multi-Star System Age.");
+        }
+
         public void OnStarClicked(PrototypeStarView star)
         {
-            if (IsCollapsed || star == null || !star.IsInteractable)
+            if (IsRunEnded || star == null || !star.IsInteractable)
                 return;
+
+            if (PrototypeGameplayFeatures.UsesMultiStar(gameplayMode))
+                SelectStar(star);
 
             var stage = star.Stage;
             var reward = GetClickReward(star);
 
             effectManager?.PlayClickEffect(star.transform.position, stage);
-            EmitStardust(reward, star.transform.position, stage);
+
+            if (IsSingleStarMode)
+                CreditStardustDirect(reward);
+            else if (PrototypeGameplayFeatures.UsesParticleVacuum(gameplayMode))
+            {
+                EmitStardust(reward, star.transform.position, stage);
+            }
+            else
+                CreditStardustDirect(reward);
+
             floatingTextSpawner?.Spawn(star.transform.position, reward, stage);
             RunStats.RecordClick();
 
-            star.AddAge(BaseAgePerClick, GetEffectiveAgeGainMultiplier());
-            AddEntropy(PrototypeEntropyBalance.EntropyPerClick);
+            star.AddAge(GetAgePerClick(), GetEffectiveAgeGainMultiplier());
+
+            if (PrototypeGameplayFeatures.UsesEntropy(gameplayMode))
+                AddEntropy(PrototypeEntropyBalance.EntropyPerClick);
+
             star.RefreshVisual();
             star.PlayClickPop();
 
-            if (star.StarAge >= 100)
+            if (star.HasReachedMaxAge)
                 EnqueueSupernova(star);
             else
-                OnStateChanged?.Invoke();
+                NotifyStateChanged();
         }
 
-        public void CreditStardust(double amount)
+        public void CreditStardustDirect(double amount)
         {
-            if (IsCollapsed || amount <= 0)
+            if (IsRunEnded || amount <= 0)
                 return;
 
             Stardust += amount;
             RunStats.RecordStardustProduced(amount);
-            AddEntropy((float)(amount * PrototypeEntropyBalance.EntropyPerStardustProduced));
+
+            if (PrototypeGameplayFeatures.UsesEntropy(gameplayMode))
+                AddEntropy((float)(amount * PrototypeEntropyBalance.EntropyPerStardustProduced));
+
             OnStardustGained?.Invoke((int)amount);
-            OnStateChanged?.Invoke();
+            NotifyStateChanged();
+        }
+
+        public bool SpendStardust(double amount)
+        {
+            if (IsRunEnded || Stardust < amount)
+                return false;
+
+            Stardust -= amount;
+            NotifyStateChanged();
+            return true;
+        }
+
+        public void AddDnaPotential(double amount)
+        {
+            if (IsRunEnded || amount <= 0)
+                return;
+
+            DnaPotential += amount;
+            NotifyStateChanged();
+        }
+
+        public void NotifyDnaPotentialGained() => OnDnaGained?.Invoke();
+
+        public void TrySpawnDnaPotential(Vector3 position, float amount)
+        {
+            if (IsRunEnded || PrototypeGameplayFeatures.UsesUniverseCollapse(gameplayMode) ||
+                particleManager == null || amount <= 0f)
+                return;
+
+            particleManager.SpawnDnaPotential(position, amount);
+        }
+
+        public int GetPlanetClickReward(PrototypePlanet planet)
+        {
+            if (planet == null || !planet.IsAlive)
+                return 0;
+
+            var definition = planet.Definition;
+            var baseReward = (definition != null
+                                 ? definition.baseClickValue
+                                 : SingleStarBalance.planets.fallbackBaseClickReward) +
+                             Upgrades.PlanetClickValueLevel *
+                             (IsSingleStarMode
+                                 ? SingleStarBalance.planetClickValuePerLevel
+                                 : PrototypePlanetBalance.PlanetClickValuePerLevel);
+            var civilizationMultiplier =
+                SingleStarBalance.civilization.GetStageClickBonusMultiplier(planet.CivilizationStage);
+            var speciesMultiplier = planet.HasSpecies
+                ? SingleStarBalance.species.GetClickStardustMultiplier(planet.Intelligence, planet.Aggression)
+                : 1f;
+
+            return Mathf.RoundToInt((float)baseReward * civilizationMultiplier * speciesMultiplier);
+        }
+
+        public float GetPlanetClickDamage() =>
+            IsSingleStarMode
+                ? SingleStarBalance.basePlanetClickDamage
+                : PrototypePlanetBalance.BasePlanetClickDamage;
+
+        public void NotifyStateChanged() => OnStateChanged?.Invoke();
+
+        public bool TryCreatePlanet()
+        {
+            if (planetManager == null)
+                return false;
+
+            if ((SelectedStar == null || !SelectedStar.IsInteractable) && HasActiveStar)
+                SelectStar(GetActiveStars()[0]);
+
+            return planetManager.TryCreatePlanet();
+        }
+
+        public void StartNewStarSystem() => StartNewRun(resetPrestigeBonuses: false);
+
+        public void CreditStardust(double amount)
+        {
+            CreditStardustDirect(amount);
         }
 
         public void CreditDnaFragment()
@@ -288,7 +607,7 @@ namespace Universes.Prototype
             Entropy = Mathf.Min(100f, Entropy + amount * GetEntropyGainMultiplier());
             OnEntropyChanged?.Invoke(Entropy);
 
-            if (Entropy >= 100f)
+            if (Entropy >= 100f && PrototypeGameplayFeatures.UsesUniverseCollapse(gameplayMode))
                 CollapseUniverse(false);
         }
 
@@ -297,7 +616,7 @@ namespace Universes.Prototype
 
         private void TickPassiveProduction()
         {
-            if (IsCollapsed)
+            if (IsRunEnded)
                 return;
 
             var changed = false;
@@ -307,18 +626,25 @@ namespace Universes.Prototype
                 if (reward <= 0)
                     continue;
 
-                EmitStardust(reward, star.transform.position, star.Stage);
-                star.AddAge(BaseAgePerPassiveTick, GetEffectiveAgeGainMultiplier());
-                AddEntropy(PrototypeEntropyBalance.EntropyPerPassiveTick);
+                if (IsSingleStarMode || !PrototypeGameplayFeatures.UsesParticleVacuum(gameplayMode))
+                    CreditStardustDirect(reward);
+                else
+                    EmitStardust(reward, star.transform.position, star.Stage);
+
+                star.AddAge(GetAgePerPassiveTick(), GetEffectiveAgeGainMultiplier());
+
+                if (PrototypeGameplayFeatures.UsesEntropy(gameplayMode))
+                    AddEntropy(PrototypeEntropyBalance.EntropyPerPassiveTick);
+
                 star.RefreshVisual();
                 changed = true;
 
-                if (star.StarAge >= 100)
+                if (star.HasReachedMaxAge)
                     EnqueueSupernova(star);
             }
 
             if (changed)
-                OnStateChanged?.Invoke();
+                NotifyStateChanged();
         }
 
         private void TickEntropy(float deltaTime)
@@ -370,12 +696,34 @@ namespace Universes.Prototype
         private void ExecuteSupernova(PrototypeStarView star)
         {
             var position = star.transform.position;
-            var bonus = GetSupernovaBonus() + PrototypeCosmicBalance.SupernovaParticleBurst;
 
             effectManager?.PlaySupernovaEffect(position);
+            RunStats.RecordSupernova();
+
+            if (IsSingleStarMode)
+            {
+                star.PlaySupernovaEffect();
+                OnSupernova?.Invoke();
+                EndStarSystem();
+                return;
+            }
+
+            if (PrototypeGameplayFeatures.UsesMultiStar(gameplayMode) &&
+                !PrototypeGameplayFeatures.UsesUniverseCollapse(gameplayMode))
+            {
+                CreditStardustDirect(SingleStarBalance.multiStar.supernovaStardustBonus +
+                                     Upgrades.SupernovaBonusLevel * SingleStarBalance.upgrades.supernovaBonusPerLevel);
+                planetManager?.ApplySupernovaToStar(star, SingleStarBalance.multiStar.supernovaPlanetDamage,
+                    SingleStarBalance.multiStar.supernovaPlanetDestroyChance);
+                OnSupernova?.Invoke();
+                NotifyStateChanged();
+                star.PlaySupernovaEffect();
+                return;
+            }
+
+            var bonus = GetSupernovaBonus() + PrototypeCosmicBalance.SupernovaParticleBurst;
             EmitStardust(bonus, position, PrototypeStarStage.Supernova, playEmitVfx: false);
             AddEntropy(PrototypeEntropyBalance.EntropyPerSupernova);
-            RunStats.RecordSupernova();
             ApplySupernovaAreaEffect(position, star);
 
             if (UnityEngine.Random.value < PrototypeCosmicBalance.SupernovaDnaChance +
@@ -386,7 +734,7 @@ namespace Universes.Prototype
                 TrySpawnBlackHole(position);
 
             OnSupernova?.Invoke();
-            OnStateChanged?.Invoke();
+            NotifyStateChanged();
             star.PlaySupernovaEffect();
         }
 
@@ -498,11 +846,13 @@ namespace Universes.Prototype
 
         public bool TryCreateNewStar()
         {
-            if (IsCollapsed || Stardust < CreateStarCost)
+            if (!CanCreateNewStar(out _))
                 return false;
 
-            Stardust -= CreateStarCost;
-            SpawnStar();
+            Stardust -= GetCreateStarCost();
+            var star = SpawnStar();
+            if (star != null)
+                SelectStar(star);
             OnStateChanged?.Invoke();
             return true;
         }
@@ -513,7 +863,9 @@ namespace Universes.Prototype
                 CollapseUniverse(true);
         }
 
-        public void StartNewUniverse()
+        public void StartNewUniverse() => StartNewRun(resetPrestigeBonuses: true);
+
+        private void StartNewRun(bool resetPrestigeBonuses)
         {
             foreach (var star in _stars.ToList())
             {
@@ -530,26 +882,70 @@ namespace Universes.Prototype
             _stars.Clear();
             _blackHoles.Clear();
             _supernovaQueue.Clear();
+            _centralStar = null;
+            SelectedStar = null;
+            _nextStarId = 1;
             particleManager?.ClearAll();
+            planetManager?.ResetAll();
 
             Stardust = PrototypePrestigeModifiers.GetStartingStardust(Prestige);
+            DnaPotential = 0;
             DnaFragments = 0;
             Entropy = 0;
             IsCollapsed = false;
+            IsStarSystemEnded = false;
             _passiveTimer = 0f;
             Upgrades.Reset();
             RunStats.Reset();
             LastCollapseBreakdown = null;
+            LastStarSystemBreakdown = null;
 
             OnEntropyChanged?.Invoke(Entropy);
-            SpawnStar();
-            OnStateChanged?.Invoke();
+
+            if (IsSingleStarMode)
+                SpawnCentralStar();
+            else if (PrototypeGameplayFeatures.UsesMultiStar(gameplayMode) &&
+                     !PrototypeGameplayFeatures.UsesUniverseCollapse(gameplayMode))
+                SpawnStartingMultiStar();
+            else
+                SpawnStar();
+
+            NotifyStateChanged();
+        }
+
+        private void EndStarSystem()
+        {
+            if (IsStarSystemEnded)
+                return;
+
+            IsStarSystemEnded = true;
+            planetManager?.DestroyAllPlanets();
+
+            foreach (var star in _stars)
+            {
+                if (star != null)
+                    star.SetInputEnabled(false);
+            }
+
+            var civRank = planetManager != null ? planetManager.HighestCivilizationRank : 0;
+            LastStarSystemBreakdown = PrototypeStarSystemBreakdown.Calculate(RunStats, DnaPotential, civRank);
+            Prestige.AddDna(LastStarSystemBreakdown.TotalGained);
+
+            OnStarSystemEnded?.Invoke();
+            NotifyStateChanged();
         }
 
         public void OnStarRemoved(PrototypeStarView star)
         {
             if (star != null)
                 _stars.Remove(star);
+
+            if (SelectedStar == star)
+            {
+                SelectedStar = GetActiveStars().FirstOrDefault();
+                if (SelectedStar != null)
+                    planetManager?.BindHostStar(SelectedStar);
+            }
 
             OnStateChanged?.Invoke();
         }
@@ -596,19 +992,50 @@ namespace Universes.Prototype
             CreditStardust(rate * deltaTime);
         }
 
-        private void SpawnStar() => SpawnStarAt(GetRandomSpawnPosition(), 0);
+        private void SpawnCentralStar()
+        {
+            var star = SpawnStarAt(Vector3.zero, 0);
+            if (star == null)
+                return;
+
+            star.SetDriftEnabled(false);
+            star.ConfigureMaxAge(SingleStarBalance.maxStarHealth);
+            _centralStar = star;
+            SelectedStar = star;
+            planetManager?.BindHostStar(star);
+        }
+
+        private void SpawnStartingMultiStar()
+        {
+            var star = SpawnStarAt(Vector3.zero, 0);
+            if (star == null)
+                return;
+
+            star.SetDriftEnabled(false);
+            star.ConfigureMaxAge(SingleStarBalance.maxStarHealth);
+            _centralStar = star;
+            SelectedStar = star;
+            planetManager?.BindHostStar(star);
+        }
+
+        private PrototypeStarView SpawnStar() => SpawnStarAt(GetRandomSpawnPosition(), 0);
 
         private PrototypeStarView SpawnStarAt(Vector3 position, int startingAge)
         {
             if (starViewPrefab == null)
                 return null;
 
+            var starId = _nextStarId++;
             var view = Instantiate(starViewPrefab, position, Quaternion.identity, worldRoot);
             view.Bind(this);
+            view.ConfigureMaxAge(GetMaxStarHealth());
+            view.ConfigureIdentity(starId, PrototypeSpeciesNaming.GenerateStarName(starId));
             if (startingAge > 0)
                 view.SetAge(startingAge);
             view.RefreshVisual();
             _stars.Add(view);
+            if (SelectedStar == null && view.IsInteractable)
+                SelectedStar = view;
             RunStats.RecordStarCreated();
             return view;
         }
@@ -671,7 +1098,8 @@ namespace Universes.Prototype
             _controller = controller;
             transform.position = position;
             _lifetime = PrototypeCosmicBalance.BlackHoleLifetimeSeconds;
-            _dnaTimer = PrototypeCosmicBalance.BlackHoleDnaIntervalSeconds * 0.5f;
+            _dnaTimer = PrototypeCosmicBalance.BlackHoleDnaIntervalSeconds *
+                        PrototypeCosmicBalance.BlackHoleInitialDnaTimerMultiplier;
             _age = 0f;
             DnaPotential = 0f;
 
@@ -707,7 +1135,7 @@ namespace Universes.Prototype
                 DnaPotential += 1f;
                 _controller.AddBlackHoleDnaPotential(_controller.GetBlackHoleDnaMultiplier());
 
-                if (UnityEngine.Random.value < 0.35f)
+                if (UnityEngine.Random.value < PrototypeCosmicBalance.BlackHoleDnaFragmentChance)
                     _controller.TrySpawnDnaFragment(transform.position);
             }
 

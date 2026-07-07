@@ -31,7 +31,7 @@ namespace Universes.Prototype
                 controller.OnUniverseCollapsed += OnUniverseCollapsed;
             }
 
-            SetVisible(controller == null || !controller.IsCollapsed);
+            SetVisible(controller == null || !controller.IsRunEnded);
         }
 
         private void OnDestroy()
@@ -48,7 +48,7 @@ namespace Universes.Prototype
             if (controller == null)
                 return;
 
-            if (!controller.IsCollapsed)
+            if (!controller.IsRunEnded)
                 SetVisible(true);
 
             RefreshAll();
