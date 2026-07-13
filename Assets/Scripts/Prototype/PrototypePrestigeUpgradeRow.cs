@@ -16,13 +16,29 @@ namespace Universes.Prototype
         [SerializeField] private Color disabledButtonColor = new(0.15f, 0.15f, 0.18f);
 
         private PrototypeGameController _controller;
+        private PrototypePrestigeState _prestige;
+        private bool _allowPurchase;
 
         public PrototypePrestigeUpgradeDefinition Definition => definition;
 
         public void Initialize(PrototypeGameController controller)
         {
             _controller = controller;
+            _prestige = controller != null ? controller.Prestige : null;
+            _allowPurchase = false;
+            InitializeCommon();
+        }
 
+        public void Initialize(PrototypePrestigeState prestige, bool allowPurchase)
+        {
+            _controller = null;
+            _prestige = prestige;
+            _allowPurchase = allowPurchase;
+            InitializeCommon();
+        }
+
+        private void InitializeCommon()
+        {
             if (definition == null)
             {
                 Debug.LogWarning($"PrototypePrestigeUpgradeRow on {name} has no definition assigned.", this);
@@ -43,18 +59,26 @@ namespace Universes.Prototype
 
         private void OnBuyClicked()
         {
-            if (_controller != null && definition != null && _controller.TryPurchasePrestigeUpgrade(definition))
+            if (definition == null)
+                return;
+
+            if (_controller != null && _controller.TryPurchasePrestigeUpgrade(definition))
+            {
+                Refresh();
+                return;
+            }
+
+            if (_controller == null && _prestige != null && _allowPurchase && _prestige.TryPurchase(definition))
                 Refresh();
         }
 
         public void Refresh()
         {
-            if (_controller == null || definition == null)
+            if (_prestige == null || definition == null)
                 return;
 
-            var prestige = _controller.Prestige;
-            var level = prestige.GetLevel(definition);
-            var cost = prestige.GetCost(definition);
+            var level = _prestige.GetLevel(definition);
+            var cost = _prestige.GetCost(definition);
             var maxed = definition.maxLevel > 0 && level >= definition.maxLevel;
 
             if (titleText != null)
@@ -68,7 +92,9 @@ namespace Universes.Prototype
 
             if (buyButton != null)
             {
-                var canBuy = _controller.IsRunEnded && !maxed && prestige.UniverseDna >= cost;
+                var canBuy = (_allowPurchase || (_controller != null && _controller.IsRunEnded)) &&
+                             !maxed &&
+                             _prestige.UniverseDna >= cost;
                 buyButton.interactable = canBuy;
                 if (buttonImage != null)
                     buttonImage.color = canBuy ? enabledButtonColor : disabledButtonColor;

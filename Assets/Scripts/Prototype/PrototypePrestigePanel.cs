@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace Universes.Prototype
 {
@@ -7,6 +9,14 @@ namespace Universes.Prototype
         [SerializeField] private PrototypeGameController controller;
         [SerializeField] private GameObject panelRoot;
         [SerializeField] private PrototypePrestigeUpgradeRow[] upgradeRows;
+        [SerializeField] private bool standaloneSceneMode;
+        [SerializeField] private Text universeDnaText;
+        [SerializeField] private Button backToGameButton;
+        [SerializeField] private string gameSceneName = "PrototypeScene";
+
+        private readonly PrototypePrestigeState _standalonePrestige = new();
+        private const string ReturnSceneKey = "PrototypePrestigeReturnScene";
+        private PrototypePrestigeState ActivePrestige => standaloneSceneMode ? _standalonePrestige : controller?.Prestige;
 
         private void Awake()
         {
@@ -19,36 +29,56 @@ namespace Universes.Prototype
 
         private void Start()
         {
+            if (standaloneSceneMode)
+                PrototypePrestigeSave.Load(_standalonePrestige);
+
             if (upgradeRows == null || upgradeRows.Length == 0)
                 upgradeRows = GetComponentsInChildren<PrototypePrestigeUpgradeRow>(true);
 
             foreach (var row in upgradeRows)
             {
-                if (row != null)
+                if (row == null)
+                    continue;
+
+                if (standaloneSceneMode)
+                    row.Initialize(_standalonePrestige, allowPurchase: true);
+                else
                     row.Initialize(controller);
             }
 
-            if (controller != null)
+            if (standaloneSceneMode)
+            {
+                _standalonePrestige.OnChanged += RefreshAll;
+                backToGameButton?.onClick.AddListener(LoadGameScene);
+            }
+            else if (controller != null)
             {
                 controller.Prestige.OnChanged += RefreshAll;
-                controller.OnUniverseCollapsed += OnUniverseCollapsed;
                 controller.OnStateChanged += OnStateChanged;
             }
 
-            Hide();
+            if (standaloneSceneMode)
+                Show();
+            else
+                Hide();
         }
 
         private void OnDestroy()
         {
-            if (controller == null)
+            if (standaloneSceneMode)
+            {
+                _standalonePrestige.OnChanged -= RefreshAll;
+                if (backToGameButton != null)
+                    backToGameButton.onClick.RemoveListener(LoadGameScene);
                 return;
+            }
 
-            controller.Prestige.OnChanged -= RefreshAll;
-            controller.OnUniverseCollapsed -= OnUniverseCollapsed;
-            controller.OnStateChanged -= OnStateChanged;
+            if (controller != null)
+            {
+                controller.Prestige.OnChanged -= RefreshAll;
+                controller.OnStateChanged -= OnStateChanged;
+            }
         }
-
-        private void OnUniverseCollapsed(bool _) => Show();
 
         private void OnStateChanged()
         {
@@ -72,6 +102,9 @@ namespace Universes.Prototype
 
         private void RefreshAll()
         {
+            if (universeDnaText != null && ActivePrestige != null)
+                universeDnaText.text = $"Universe DNA: {ActivePrestige.UniverseDna:0}";
+
             if (upgradeRows == null)
                 return;
 
@@ -80,6 +113,13 @@ namespace Universes.Prototype
                 if (row != null)
                     row.Refresh();
             }
+        }
+
+        private void LoadGameScene()
+        {
+            var sceneName = PlayerPrefs.GetString(ReturnSceneKey, gameSceneName);
+            if (!string.IsNullOrWhiteSpace(sceneName))
+                SceneManager.LoadScene(sceneName);
         }
     }
 }

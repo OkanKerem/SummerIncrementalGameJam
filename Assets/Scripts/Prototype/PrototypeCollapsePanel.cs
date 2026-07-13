@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Universes.Prototype
@@ -12,6 +13,8 @@ namespace Universes.Prototype
         [SerializeField] private Text summaryText;
         [SerializeField] private Button prestigeButton;
         [SerializeField] private Button startNewUniverseButton;
+        [SerializeField] private string prestigeSceneName = "PrototypePrestigeScene";
+        private const string ReturnSceneKey = "PrototypePrestigeReturnScene";
 
         private void Awake()
         {
@@ -24,12 +27,10 @@ namespace Universes.Prototype
             if (panelRoot == null)
                 panelRoot = gameObject;
 
-            prestigeButton?.onClick.AddListener(() => prestigePanel?.Show());
+            prestigeButton?.onClick.AddListener(LoadPrestigeScene);
             startNewUniverseButton?.onClick.AddListener(() =>
             {
-                controller?.StartNewUniverse();
-                prestigePanel?.Hide();
-                Hide();
+                controller?.ReloadActiveSceneForNewUniverse();
             });
 
             if (controller != null)
@@ -60,7 +61,6 @@ namespace Universes.Prototype
                 summaryText.text = BuildSummary(controller, breakdown);
             }
 
-            prestigePanel?.Show();
         }
 
         public void Hide()
@@ -97,6 +97,16 @@ namespace Universes.Prototype
                 $"Universe DNA gained this run: +{breakdown.TotalGained}\n" +
                 $"Total Universe DNA owned: {controller.Prestige.UniverseDna:0}\n\n" +
                 "Spend Universe DNA on permanent upgrades, then start a stronger universe.";
+        }
+
+        private void LoadPrestigeScene()
+        {
+            if (!string.IsNullOrWhiteSpace(prestigeSceneName))
+            {
+                PlayerPrefs.SetString(ReturnSceneKey, SceneManager.GetActiveScene().name);
+                PlayerPrefs.Save();
+                SceneManager.LoadScene(prestigeSceneName);
+            }
         }
     }
 }

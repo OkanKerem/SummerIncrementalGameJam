@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: max_star_count
   m_EditorClassIdentifier: 
   upgradeType: 11
+  upgradeTier: 2
   displayName: Max Star Count
   description: Unlocks one additional active star slot per level, up to five stars.
   baseCost: 180

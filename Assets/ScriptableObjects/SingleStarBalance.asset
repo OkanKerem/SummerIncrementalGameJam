@@ -12,21 +12,30 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69661fbca7b5bf54495c0c21e6a66acc, type: 3}
   m_Name: SingleStarBalance
   m_EditorClassIdentifier: 
-  maxStarHealth: 200
+  maxStarHealth: 400
   agePerClick: 1
   agePerPassiveTick: 1
   passiveTickInterval: 1
-  baseClickReward: 3
+  baseClickReward: 10
   basePassivePerSecond: 1
   createPlanetCost: 30
+  createPlanetCostIncreasePercent: 15
   baseMaxPlanets: 3
   baseOrbitRadius: 1.5
   orbitRadiusStep: 1
   orbitSpeed: 28
   basePlanetClickDamage: 8
   planetSpawnDelay: 1
+  showOrbitLines: 1
+  orbitLineColor: {r: 0.55, g: 0.75, b: 1, a: 0.22}
+  orbitLineWidth: 0.025
+  orbitLineSegments: 72
+  orbitLineSortingOrder: 0
+  cameraDragEnabled: 1
+  cameraDragMouseButton: 1
+  cameraDragSpeed: 1
   autoFormationCheckInterval: 3
-  baseAutoFormationChance: 0.05
+  baseAutoFormationChance: 0
   autoFormationChancePerLevel: 0.1
   civilizationTickInterval: 2.5
   lifeProgressBase: 0.08
@@ -60,8 +69,8 @@ MonoBehaviour:
     lowAggressionClickStardustMultiplier: 1
     mediumAggressionClickStardustMultiplier: 1.05
     highAggressionClickStardustMultiplier: 1.1
-    selfDamageMinimumStage: 5
-    selfDestructionMinimumStage: 5
+    selfDamageMinimumStage: 3
+    selfDestructionMinimumStage: 4
     mediumAggressionSelfDamageChance: 0.0025
     highAggressionSelfDamageChance: 0.01
     highAggressionSelfDestructionChance: 0.001
@@ -154,43 +163,87 @@ MonoBehaviour:
       stageClickBonusMultiplier: 1
       stageSelfDestructionRiskMultiplier: 0
     - stage: 1
-      stageName: Life
-      progressRequirement: 1
-      stageDnaValue: 0.2
-      stageClickBonusMultiplier: 1.05
-      stageSelfDestructionRiskMultiplier: 0
-    - stage: 2
       stageName: Primitive Life
       progressRequirement: 1
       stageDnaValue: 0.35
       stageClickBonusMultiplier: 1.05
       stageSelfDestructionRiskMultiplier: 0
-    - stage: 3
-      stageName: Tribe
-      progressRequirement: 1
-      stageDnaValue: 0.55
-      stageClickBonusMultiplier: 1.1
-      stageSelfDestructionRiskMultiplier: 0
-    - stage: 4
-      stageName: Civilization
-      progressRequirement: 1
-      stageDnaValue: 0.85
-      stageClickBonusMultiplier: 1.1
+    - stage: 2
+      stageName: Civilization Phase
+      progressRequirement: 1.25
+      stageDnaValue: 0.9
+      stageClickBonusMultiplier: 1.12
       stageSelfDestructionRiskMultiplier: 0.5
-    - stage: 5
-      stageName: Industrial Age
-      progressRequirement: 1
-      stageDnaValue: 1.25
-      stageClickBonusMultiplier: 1.15
-      stageSelfDestructionRiskMultiplier: 1
-    - stage: 6
-      stageName: Space Age
-      progressRequirement: 1
+    - stage: 3
+      stageName: Space Phase
+      progressRequirement: 1.5
       stageDnaValue: 2
       stageClickBonusMultiplier: 1.15
       stageSelfDestructionRiskMultiplier: 1.5
+    - stage: 4
+      stageName: Hard Space
+      progressRequirement: 2
+      stageDnaValue: 3.5
+      stageClickBonusMultiplier: 1.25
+      stageSelfDestructionRiskMultiplier: 2
+    spaceshipMinimumStage: 1
+    spaceshipPrefab: {fileID: 1275028092022314771, guid: 332c74886ca48d644959b0df97a15afb, type: 3}
+    spaceshipSprites:
+    - {fileID: 5708767266484348652, guid: 66b3ed61ca4b6274daad6964ed404afa, type: 3}
+    - {fileID: 6817236030902013017, guid: 66b3ed61ca4b6274daad6964ed404afa, type: 3}
+    - {fileID: 6693125099538430600, guid: 66b3ed61ca4b6274daad6964ed404afa, type: 3}
+    - {fileID: 4145851471123462591, guid: 66b3ed61ca4b6274daad6964ed404afa, type: 3}
+    - {fileID: 540352951166331170, guid: f00c1c80d80175241995b5de9aeca690, type: 3}
+    - {fileID: -3018096769890269484, guid: f00c1c80d80175241995b5de9aeca690, type: 3}
+    - {fileID: 2012625530642147762, guid: f00c1c80d80175241995b5de9aeca690, type: 3}
+    spaceshipAlienPortraitPrefab: {fileID: 1526657863573592418, guid: 8f76ea52db805154690875e13947dd21, type: 3}
+    spaceshipTripInterval: 2
+    spaceshipSpeed: 2.5
+    spaceshipDnaPotentialPerTrip: 1
+    maxActiveSpaceships: 3
   upgrades:
+    clickPowerBaseIncrement: 1
+    passiveProductionBaseIncrement: 1
     supernovaBonusPerLevel: 15
+    clickRewardPercentPerLevel: 0.25
     starStabilityAgeGainReductionPerLevel: 0.25
+    advancedStarStabilityAgeGainReductionPerLevel: 0.15
     baseClickCollectRadius: 1.1
     clickCollectRadiusPerLevel: 0.45
+    starPassiveProductionPercentPerLevel: 0.1
+    collisionDnaPotentialPerLevel: 1
+    entropyReductionPerLevel: 0.08
+    speciesDnaPotentialPerLevel: 0.25
+  multiStar:
+    initialStarSlots: 1
+    maxStarSlots: 5
+    createStarBaseCost: 750
+    createStarCostScale: 1.65
+    createStarCostIncreasePercent: 65
+    supernovaStardustBonus: 5000
+    supernovaPlanetDestroyChance: 0.495
+    supernovaPlanetDamage: 45
+    supernovaNearbyStarRadius: 4
+    supernovaNearbyStarAgeDamage: 18
+    planetDeathStarAgeDamage: 4
+    planetDeathDnaPotential: 1
+    planetDeathEntropy: 1.5
+    planetCollisionDistance: 0.45
+    planetCollisionDnaPotential: 4
+    planetCollisionEntropy: 5
+    planetOverloadAgeGainPerPlanet: 0.08
+    planetCountBeforeOverload: 2
+    basePlanetPassiveStardust: 1
+    planetPassiveStardustPerUpgradeLevel: 0.35
+    starClickValuePerPlanetPerUpgradeLevel: 0.5
+    entropyPerActiveStarPerSecond: 0.015
+    entropyPerPlanetPerSecond: 0.01
+    phase1CameraSize: 5
+    phase2CameraStartSize: 5
+    phase2CameraTargetSize: 10
+    phase2CameraZoomDuration: 1.25
+    spawnAreaMin: {x: -15, y: -8}
+    spawnAreaMax: {x: 15, y: 8}
+    minStarSeparation: 4
+    starDriftSpeed: 0.1
+    moveCentralStarInPhase2: 1

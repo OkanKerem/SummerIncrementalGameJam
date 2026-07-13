@@ -13,7 +13,11 @@ MonoBehaviour:
   m_Name: click_power
   m_EditorClassIdentifier: 
   upgradeType: 0
+  upgradeTier: 1
   displayName: Click Power
-  description: More Stardust per click (+1 per level)
+  description: More Stardust per click. Higher levels add bigger flat bonuses.
   baseCost: 15
   costScale: 1.55
+  maxLevel: 25
+  upgradePrerequisites: []
+  statPrerequisites: []

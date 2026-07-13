@@ -17,10 +17,13 @@ namespace Universes.Prototype
         private PrototypeStarView _hostStar;
         private readonly List<PrototypePlanet> _planets = new();
         private readonly Dictionary<int, PrototypePlanetView> _views = new();
+        private readonly List<GameObject> _spaceships = new();
         private int _nextPlanetId = 1;
         private float _autoFormationTimer;
         private float _civilizationTimer;
         private float _dnaTimer;
+        private float _spaceTravelTimer;
+        private int _activeSpaceships;
 
         public IReadOnlyList<PrototypePlanet> Planets => _planets;
         public int PlanetCount => _planets.Count(p => p.IsAlive);
@@ -58,12 +61,21 @@ namespace Universes.Prototype
                     Destroy(view.gameObject);
             }
 
+            foreach (var spaceship in _spaceships)
+            {
+                if (spaceship != null)
+                    Destroy(spaceship);
+            }
+
             _planets.Clear();
             _views.Clear();
+            _spaceships.Clear();
             _nextPlanetId = 1;
             _autoFormationTimer = 0f;
             _civilizationTimer = 0f;
             _dnaTimer = 0f;
+            _spaceTravelTimer = 0f;
+            _activeSpaceships = 0;
             HighestCivilizationRank = 0;
             StopAllCoroutines();
         }
@@ -76,20 +88,38 @@ namespace Universes.Prototype
         public float GetOrbitSpeed() =>
             Balance != null ? Balance.orbitSpeed : PrototypePlanetBalance.OrbitSpeed;
 
+        public bool ShowOrbitLines => Balance == null || Balance.showOrbitLines;
+        public Color OrbitLineColor => Balance != null ? Balance.orbitLineColor : new Color(0.55f, 0.75f, 1f, 0.22f);
+        public float OrbitLineWidth => Balance != null ? Balance.orbitLineWidth : 0.025f;
+        public int OrbitLineSegments => Balance != null ? Balance.orbitLineSegments : 72;
+        public int OrbitLineSortingOrder => Balance != null ? Balance.orbitLineSortingOrder : 0;
+
         public Vector3 GetOrbitOffset(PrototypePlanet planet)
         {
             if (planet == null)
                 return Vector3.zero;
 
-            var rad = planet.OrbitAngle * Mathf.Deg2Rad;
+            return GetOrbitOffset(planet.OrbitRadius, planet.OrbitAngle);
+        }
+
+        public Vector3 GetOrbitOffset(float orbitRadius, float orbitAngle)
+        {
+            var rad = orbitAngle * Mathf.Deg2Rad;
             return new Vector3(
-                Mathf.Cos(rad) * planet.OrbitRadius * orbitEllipseScale.x,
-                Mathf.Sin(rad) * planet.OrbitRadius * orbitEllipseScale.y,
+                Mathf.Cos(rad) * orbitRadius * orbitEllipseScale.x,
+                Mathf.Sin(rad) * orbitRadius * orbitEllipseScale.y,
                 0f);
         }
 
-        public double GetCreatePlanetCost() =>
-            Balance != null ? Balance.createPlanetCost : PrototypePlanetBalance.CreatePlanetCost;
+        public double GetCreatePlanetCost()
+        {
+            if (Balance == null)
+                return PrototypePlanetBalance.CreatePlanetCost;
+
+            var createdPlanets = _controller != null ? _controller.RunStats.PlanetsCreated : 0;
+            var multiplier = 1.0 + Balance.createPlanetCostIncreasePercent / 100.0;
+            return Balance.createPlanetCost * Math.Pow(multiplier, createdPlanets);
+        }
 
         public bool HasOpenSlot() => _hostStar != null && GetPlanetCountForStar(_hostStar.StarId) < GetMaxPlanets();
 
@@ -106,10 +136,11 @@ namespace Universes.Prototype
 
             if (!free)
             {
-                if (_controller.Stardust < Balance.createPlanetCost)
+                var cost = GetCreatePlanetCost();
+                if (_controller.Stardust < cost)
                     return false;
 
-                _controller.SpendStardust(Balance.createPlanetCost);
+                _controller.SpendStardust(cost);
             }
 
             CreateRandomPlanet();
@@ -124,9 +155,11 @@ namespace Universes.Prototype
             foreach (var view in _views.Values)
                 view?.TickOrbit(deltaTime);
 
+            TickPlanetCollisions();
             TickAutoFormation(deltaTime);
             TickCivilization(deltaTime);
             TickDnaGeneration(deltaTime);
+            TickSpaceTravel(deltaTime);
         }
 
         public void OnPlanetClicked(PrototypePlanetView view)
@@ -141,6 +174,7 @@ namespace Universes.Prototype
             _controller.CreditStardustDirect(reward);
             _controller.RunStats.RecordPlanetClick();
             _controller.FloatingTextSpawner?.Spawn(view.transform.position, reward, view.GetDisplayColor());
+            _controller.SfxManager?.PlayPlanetClick();
             planet.Damage(damage);
             view.RefreshVisual();
             PlayPlanetClickEffect(view);
@@ -148,7 +182,7 @@ namespace Universes.Prototype
             if (!planet.IsAlive)
             {
                 PlayPlanetDestroyEffect(view);
-                DestroyPlanet(planet.Id);
+                DestroyPlanet(planet.Id, causeStarDamage: true, grantDna: true);
             }
 
             OnPlanetsChanged?.Invoke();
@@ -190,7 +224,7 @@ namespace Universes.Prototype
                 UnityEngine.Random.value < Balance.lifeProgressBase * Balance.planets.initialLifeChanceMultiplier)
             {
                 EnsureLifeIdentity(planet);
-                planet.ForceLifeStage(PrototypeCivilizationStage.Life);
+                planet.ForceLifeStage(PrototypeCivilizationStage.PrimitiveLife);
             }
 
             OnPlanetsChanged?.Invoke();
@@ -250,6 +284,7 @@ namespace Universes.Prototype
                 return;
 
             var position = hostStar.transform.position + GetOrbitOffset(planet);
+            _controller.SfxManager?.PlayPlanetCreated();
             planet.Definition.PlayEffect(planet.Definition.spawnEffectPrefab, position, planetsRoot);
         }
 
@@ -269,6 +304,7 @@ namespace Universes.Prototype
             if (view?.Planet?.Definition == null)
                 return;
 
+            _controller.SfxManager?.PlayPlanetDeath();
             view.Planet.Definition.PlayEffect(
                 view.Planet.Definition.destroyEffectPrefab,
                 view.transform.position,
@@ -375,6 +411,7 @@ namespace Universes.Prototype
                                durabilityFactor *
                                stageFactor *
                                speciesFactor *
+                               GetIntelligenceProgressFactor(planet) *
                                _controller.GetEffectiveAgeGainMultiplier();
 
                 if (planet.CivilizationStage == PrototypeCivilizationStage.NoLife)
@@ -382,14 +419,14 @@ namespace Universes.Prototype
                     if (UnityEngine.Random.value < progress)
                     {
                         EnsureLifeIdentity(planet);
-                        planet.ForceLifeStage(PrototypeCivilizationStage.Life);
+                        planet.ForceLifeStage(PrototypeCivilizationStage.PrimitiveLife);
                         if (!planet.LifeCountedForStats)
                         {
                             planet.LifeCountedForStats = true;
                             _controller.RunStats.RecordLifePlanet();
                         }
 
-                        NotifyCivilizationAdvanced(planet, PrototypeCivilizationStage.Life);
+                        NotifyCivilizationAdvanced(planet, PrototypeCivilizationStage.PrimitiveLife);
                     }
                 }
                 else if (planet.TryAddCivilizationProgress(progress, Balance.civilization, out var advancedTo))
@@ -411,8 +448,21 @@ namespace Universes.Prototype
             }
         }
 
-        private void NotifyCivilizationAdvanced(PrototypePlanet planet, PrototypeCivilizationStage stage) =>
+        private void NotifyCivilizationAdvanced(PrototypePlanet planet, PrototypeCivilizationStage stage)
+        {
+            if (stage == PrototypeCivilizationStage.PrimitiveLife)
+                _controller?.SfxManager?.PlayLifeEmerged();
+
             OnCivilizationAdvanced?.Invoke(planet, stage);
+        }
+
+        private static float GetIntelligenceProgressFactor(PrototypePlanet planet)
+        {
+            if (planet == null || !planet.HasSpecies)
+                return 1f;
+
+            return Mathf.Lerp(0.7f, 1.7f, Mathf.Clamp01(planet.Intelligence / 100f));
+        }
 
         private void EnsureLifeIdentity(PrototypePlanet planet)
         {
@@ -449,7 +499,7 @@ namespace Universes.Prototype
                     if (_views.TryGetValue(planet.Id, out var view) && view != null)
                         PlayPlanetDestroyEffect(view);
 
-                    DestroyPlanet(planet.Id);
+                    DestroyPlanet(planet.Id, causeStarDamage: true, grantDna: true);
                     return;
                 }
             }
@@ -503,7 +553,71 @@ namespace Universes.Prototype
                     var position = GetPlanetWorldPosition(planet);
                     _controller.TrySpawnDnaPotential(position, amount);
                 }
+
+                var speciesDnaAmount = _controller.GetSpeciesDnaPotentialPerTick(planet);
+                if (speciesDnaAmount > 0f)
+                    _controller.TrySpawnDnaPotential(GetPlanetWorldPosition(planet), speciesDnaAmount);
             }
+        }
+
+        private void TickSpaceTravel(float deltaTime)
+        {
+            if (Balance == null || _controller == null ||
+                _activeSpaceships >= Balance.civilization.maxActiveSpaceships)
+                return;
+
+            _spaceTravelTimer += deltaTime;
+            if (_spaceTravelTimer < Balance.civilization.spaceshipTripInterval)
+                return;
+
+            _spaceTravelTimer = 0f;
+            TryLaunchSpaceshipTrip();
+        }
+
+        private void TryLaunchSpaceshipTrip()
+        {
+            var sources = _planets
+                .Where(p => p.IsAlive && p.HasSpecies &&
+                            p.CivilizationStage >= Balance.civilization.spaceshipMinimumStage)
+                .ToList();
+            if (sources.Count == 0)
+                return;
+
+            var destinations = _planets.Where(p => p.IsAlive).ToList();
+            if (destinations.Count < 2)
+                return;
+
+            var source = sources[UnityEngine.Random.Range(0, sources.Count)];
+            var validDestinations = destinations.Where(p => p.Id != source.Id).ToList();
+            if (validDestinations.Count == 0)
+                return;
+
+            var destination = validDestinations[UnityEngine.Random.Range(0, validDestinations.Count)];
+            var start = GetPlanetWorldPosition(source);
+            var end = GetPlanetWorldPosition(destination);
+
+            var go = Balance.civilization.spaceshipPrefab != null
+                ? Instantiate(Balance.civilization.spaceshipPrefab, planetsRoot)
+                : new GameObject("CivilizationSpaceship");
+            go.transform.SetParent(planetsRoot, true);
+            var ship = go.GetComponent<PrototypeSpaceshipView>() ?? go.AddComponent<PrototypeSpaceshipView>();
+            _spaceships.Add(go);
+            _activeSpaceships++;
+            ship.Initialize(
+                source,
+                Balance.civilization.spaceshipSprites,
+                Balance.civilization.spaceshipAlienPortraitPrefab,
+                start,
+                end,
+                () => GetPlanetWorldPosition(destination),
+                Balance.civilization.spaceshipSpeed,
+                Balance.civilization.spaceshipPrefab != null,
+                arrivalPosition =>
+                {
+                    _spaceships.Remove(go);
+                    _activeSpaceships = Mathf.Max(0, _activeSpaceships - 1);
+                    _controller.TrySpawnDnaPotential(arrivalPosition, Balance.civilization.spaceshipDnaPotentialPerTrip);
+                });
         }
 
         public string GetPlanetDisplayName(PrototypePlanet planet)
@@ -514,6 +628,32 @@ namespace Universes.Prototype
             return !string.IsNullOrWhiteSpace(planet.PlanetName)
                 ? planet.PlanetName
                 : PrototypePlanetTypeUtility.GetLabel(planet.Definition);
+        }
+
+        public float GetPassiveStardustForStar(int starId)
+        {
+            if (Balance == null || _controller == null)
+                return 0f;
+
+            var planetCount = _planets.Count(p => p.IsAlive && p.HostStarId == starId);
+            if (planetCount <= 0)
+                return 0f;
+
+            var perPlanet = Balance.multiStar.basePlanetPassiveStardust +
+                            _controller.Upgrades.PlanetPassiveProductionLevel *
+                            Balance.multiStar.planetPassiveStardustPerUpgradeLevel;
+            return Mathf.Max(0f, planetCount * perPlanet);
+        }
+
+        public float GetStarAgeBurdenMultiplier(int starId)
+        {
+            if (Balance == null)
+                return 1f;
+
+            var overloadCount = Mathf.Max(0,
+                _planets.Count(p => p.IsAlive && p.HostStarId == starId) -
+                Balance.multiStar.planetCountBeforeOverload);
+            return 1f + overloadCount * Balance.multiStar.planetOverloadAgeGainPerPlanet;
         }
 
         private Vector3 GetPlanetWorldPosition(PrototypePlanet planet)
@@ -547,7 +687,7 @@ namespace Universes.Prototype
                 {
                     if (_views.TryGetValue(planet.Id, out var destroyedView) && destroyedView != null)
                         PlayPlanetDestroyEffect(destroyedView);
-                    DestroyPlanet(planet.Id);
+                    DestroyPlanet(planet.Id, causeStarDamage: false, grantDna: true);
                 }
                 else if (_views.TryGetValue(planet.Id, out var damagedView) && damagedView != null)
                 {
@@ -556,12 +696,72 @@ namespace Universes.Prototype
             }
         }
 
-        private void DestroyPlanet(int id, bool recordDestruction = true)
+        public void DestroyPlanetsForStar(PrototypeStarView star)
+        {
+            if (star == null)
+                return;
+
+            foreach (var planet in _planets.Where(p => p.IsAlive && p.HostStarId == star.StarId).ToList())
+            {
+                if (_views.TryGetValue(planet.Id, out var view) && view != null)
+                    PlayPlanetDestroyEffect(view);
+
+                DestroyPlanet(planet.Id, causeStarDamage: false, grantDna: true);
+            }
+        }
+
+        private void TickPlanetCollisions()
+        {
+            if (Balance == null || Balance.multiStar.planetCollisionDistance <= 0f)
+                return;
+
+            var aliveWithViews = _planets
+                .Where(p => p.IsAlive && _views.ContainsKey(p.Id))
+                .ToList();
+
+            for (var i = 0; i < aliveWithViews.Count; i++)
+            {
+                for (var j = i + 1; j < aliveWithViews.Count; j++)
+                {
+                    var a = aliveWithViews[i];
+                    var b = aliveWithViews[j];
+                    if (a.HostStarId == b.HostStarId)
+                        continue;
+
+                    if (!_views.TryGetValue(a.Id, out var viewA) || viewA == null ||
+                        !_views.TryGetValue(b.Id, out var viewB) || viewB == null)
+                        continue;
+
+                    if (Vector3.Distance(viewA.transform.position, viewB.transform.position) >
+                        Balance.multiStar.planetCollisionDistance)
+                        continue;
+
+                    _controller.SfxManager?.PlayPlanetCrossStarCollision();
+                    PlayPlanetCrossStarCollisionDestroyEffect(viewA);
+                    PlayPlanetCrossStarCollisionDestroyEffect(viewB);
+
+                    var midpoint = (viewA.transform.position + viewB.transform.position) * 0.5f;
+                    _controller.TrySpawnDnaPotential(midpoint,
+                        _controller.GetCollisionDnaPotential(Balance.multiStar.planetCollisionDnaPotential));
+                    _controller.AddEntropy(Balance.multiStar.planetCollisionEntropy);
+                    OnCivilizationEvent?.Invoke("Cross-star planet collision! Both planets were destroyed and released DNA.");
+
+                    DestroyPlanet(a.Id, causeStarDamage: true, grantDna: false);
+                    DestroyPlanet(b.Id, causeStarDamage: true, grantDna: false);
+                    return;
+                }
+            }
+        }
+
+        private void DestroyPlanet(int id, bool recordDestruction = true, bool causeStarDamage = false,
+            bool grantDna = false)
         {
             var planet = _planets.FirstOrDefault(p => p.Id == id);
             if (planet == null)
                 return;
 
+            var position = GetPlanetWorldPosition(planet);
+            var hostStar = GetHostStar(planet);
             planet.Damage(planet.MaxDurability);
 
             if (_views.TryGetValue(id, out var view) && view != null)
@@ -573,7 +773,35 @@ namespace Universes.Prototype
             if (recordDestruction)
                 _controller.RunStats.RecordPlanetDestroyed();
 
+            if (grantDna && Balance != null && Balance.multiStar.planetDeathDnaPotential > 0f)
+                _controller.TrySpawnDnaPotential(position, Balance.multiStar.planetDeathDnaPotential);
+
+            if (recordDestruction && Balance != null && Balance.multiStar.planetDeathEntropy > 0f)
+                _controller.AddEntropy(Balance.multiStar.planetDeathEntropy);
+
+            if (causeStarDamage && hostStar != null && Balance != null &&
+                Balance.multiStar.planetDeathStarAgeDamage > 0f)
+            {
+                hostStar.AddAge(Balance.multiStar.planetDeathStarAgeDamage, 1f);
+                hostStar.RefreshVisual();
+                if (hostStar.HasReachedMaxAge)
+                    _controller.QueueSupernova(hostStar);
+            }
+
             OnPlanetsChanged?.Invoke();
+        }
+
+        private void PlayPlanetCrossStarCollisionDestroyEffect(PrototypePlanetView view)
+        {
+            if (view?.Planet?.Definition == null)
+                return;
+
+            var definition = view.Planet.Definition;
+            var prefab = definition.crossStarCollisionDestroyEffectPrefab != null
+                ? definition.crossStarCollisionDestroyEffectPrefab
+                : definition.destroyEffectPrefab;
+
+            definition.PlayEffect(prefab, view.transform.position, planetsRoot);
         }
     }
 }

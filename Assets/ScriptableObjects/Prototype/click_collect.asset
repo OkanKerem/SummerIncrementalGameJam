@@ -13,7 +13,11 @@ MonoBehaviour:
   m_Name: click_collect
   m_EditorClassIdentifier: 
   upgradeType: 4
+  upgradeTier: 2
   displayName: Click Collect
   description: Vacuum nearby Stardust and DNA Fragments anywhere you click (+0.45 radius per level)
   baseCost: 22
   costScale: 1.55
+  maxLevel: 5
+  upgradePrerequisites: []
+  statPrerequisites: []

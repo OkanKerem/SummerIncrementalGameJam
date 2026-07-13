@@ -13,11 +13,12 @@ MonoBehaviour:
   m_Name: planet_dna_chance
   m_EditorClassIdentifier: 
   upgradeType: 7
+  upgradeTier: 1
   displayName: Planet DNA Chance
   description: Planets generate more DNA Potential over time
   baseCost: 20
   costScale: 1.5
-  maxLevel: 0
+  maxLevel: 10
   upgradePrerequisites: []
   statPrerequisites:
   - statType: 3

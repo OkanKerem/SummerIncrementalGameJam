@@ -7,6 +7,7 @@ namespace Universes.Prototype
         [SerializeField] private PrototypeGameController controller;
         [SerializeField] private PrototypeUpgradeRow[] upgradeRows;
         [SerializeField] private GameObject panelRoot;
+        [SerializeField] private bool hideMaxedUpgrades;
 
         private void Start()
         {
@@ -32,6 +33,7 @@ namespace Universes.Prototype
             }
 
             SetVisible(controller == null || !controller.IsRunEnded);
+            RefreshAll();
         }
 
         private void OnDestroy()
@@ -70,8 +72,20 @@ namespace Universes.Prototype
             foreach (var row in upgradeRows)
             {
                 if (row != null)
-                    row.Refresh();
+                    row.Refresh(hideMaxedUpgrades);
             }
+        }
+
+        public void SetHideMaxedUpgrades(bool hide)
+        {
+            hideMaxedUpgrades = hide;
+            RefreshAll();
+        }
+
+        public void ToggleHideMaxedUpgrades()
+        {
+            hideMaxedUpgrades = !hideMaxedUpgrades;
+            RefreshAll();
         }
     }
 }

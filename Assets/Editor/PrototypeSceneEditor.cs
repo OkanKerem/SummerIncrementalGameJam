@@ -12,6 +12,9 @@ namespace Universes.Editor
     public static class PrototypeSceneEditor
     {
         private const string ScenePath = "Assets/Scenes/PrototypeScene.unity";
+        private const string PrestigeScenePath = "Assets/Scenes/PrototypePrestigeScene.unity";
+        private const string PrestigeSceneName = "PrototypePrestigeScene";
+        private const string GameSceneName = "PrototypeScene";
         private const string PrefabPath = "Assets/Prefabs/Prototype/Star.prefab";
         private const string UpgradeRowPrefabPath = "Assets/Prefabs/Prototype/UpgradeRow.prefab";
         private const string UpgradePanelPrefabPath = "Assets/Prefabs/Prototype/UpgradePanel.prefab";
@@ -87,11 +90,14 @@ namespace Universes.Editor
             if (planetManager == null)
                 planetManager = controller.gameObject.AddComponent<PrototypePlanetManager>();
 
+            var sfxManager = PrototypeSfxEditor.EnsureSfxManager(controller);
+
             SetRef(planetManager, "planetPrefab", planetPrefab);
             SetRef(planetManager, "planetTypeCatalog", planetCatalog);
             SetRef(controller, "planetManager", planetManager);
             SetRef(controller, "planetTypeCatalog", planetCatalog);
             SetRef(controller, "singleStarBalance", singleStarBalance);
+            SetRef(controller, "sfxManager", sfxManager);
             SetEnum(controller, "gameplayMode", (int)PrototypeGameplayMode.SingleStarSystemAge);
 
             BuildSingleStarStepUi(canvas.gameObject, controller, hud);
@@ -166,6 +172,25 @@ namespace Universes.Editor
             RebuildPrestigePanelPrefab();
             AssetDatabase.SaveAssets();
             Debug.Log($"Prestige assets ready under {PrototypePrestigeFolder} and {PrestigePanelPrefabPath}.");
+        }
+
+        [MenuItem("Universes/Create Prototype Prestige Scene")]
+        public static void CreatePrestigeSceneMenu()
+        {
+            EnsureFolder("Assets/Scenes");
+            EnsureFolder(PrototypePrestigeFolder);
+            EnsureFolder("Assets/Prefabs/Prototype");
+            CreateAllPrestigeUpgradeDefinitions();
+            LoadOrCreatePrestigeRowPrefab();
+            LoadOrCreatePrestigePanelPrefab();
+
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            BuildPrestigeScene();
+            EditorSceneManager.SaveScene(scene, PrestigeScenePath);
+            EnsureSceneInBuildSettings(ScenePath);
+            EnsureSceneInBuildSettings(PrestigeScenePath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Prototype prestige scene saved to {PrestigeScenePath}.");
         }
 
         [MenuItem("Universes/Add Prototype Prestige UI To Open Scene")]
@@ -739,6 +764,76 @@ namespace Universes.Editor
 
             if (hud != null)
                 SetRef(hud, "universeDnaText", universeDna);
+        }
+
+        private static void BuildPrestigeScene()
+        {
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            var cameraGo = new GameObject("Main Camera");
+            var camera = cameraGo.AddComponent<Camera>();
+            camera.tag = "MainCamera";
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color(0.015f, 0.02f, 0.04f);
+            camera.orthographic = true;
+            camera.orthographicSize = 5f;
+            cameraGo.transform.position = new Vector3(0f, 0f, -10f);
+
+            var eventSystemGo = new GameObject("EventSystem");
+            eventSystemGo.AddComponent<EventSystem>();
+            eventSystemGo.AddComponent<StandaloneInputModule>();
+
+            var canvasGo = new GameObject("Canvas");
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = canvasGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            canvasGo.AddComponent<GraphicRaycaster>();
+
+            var title = CreateText(canvasGo.transform, "Permanent DNA Upgrades", font, 34);
+            title.gameObject.name = "Title";
+            title.fontStyle = FontStyle.Bold;
+            title.color = new Color(0.8f, 0.9f, 1f);
+            AnchorTop(title.rectTransform, 0, -32, 700, 50);
+
+            var universeDna = CreateText(canvasGo.transform, "Universe DNA: 0", font, 24);
+            universeDna.gameObject.name = "UniverseDnaText";
+            universeDna.color = new Color(0.55f, 1f, 0.75f);
+            AnchorTop(universeDna.rectTransform, 0, -86, 500, 36);
+
+            var backGo = new GameObject("BackToGameButton", typeof(RectTransform));
+            backGo.transform.SetParent(canvasGo.transform, false);
+            var backRect = backGo.GetComponent<RectTransform>();
+            backRect.anchorMin = new Vector2(0f, 1f);
+            backRect.anchorMax = new Vector2(0f, 1f);
+            backRect.pivot = new Vector2(0f, 1f);
+            backRect.anchoredPosition = new Vector2(24f, -24f);
+            backRect.sizeDelta = new Vector2(220f, 44f);
+            backGo.AddComponent<Image>().color = new Color(0.16f, 0.22f, 0.34f);
+            var backButton = backGo.AddComponent<Button>();
+            var backLabel = CreateText(backGo.transform, "Back To Game", font, 16);
+            Stretch(backLabel.rectTransform);
+            backLabel.alignment = TextAnchor.MiddleCenter;
+
+            var prestigePrefab = LoadOrCreatePrestigePanelPrefab();
+            var prestigeGo = (GameObject)PrefabUtility.InstantiatePrefab(prestigePrefab, canvasGo.transform);
+            prestigeGo.name = "PrestigePanel";
+            var prestigeRect = prestigeGo.GetComponent<RectTransform>();
+            prestigeRect.anchorMin = new Vector2(0.5f, 0f);
+            prestigeRect.anchorMax = new Vector2(0.5f, 1f);
+            prestigeRect.pivot = new Vector2(0.5f, 0.5f);
+            prestigeRect.anchoredPosition = new Vector2(0f, -24f);
+            prestigeRect.sizeDelta = new Vector2(720f, -170f);
+
+            var prestigePanel = prestigeGo.GetComponent<PrototypePrestigePanel>();
+            if (prestigePanel != null)
+            {
+                SetBool(prestigePanel, "standaloneSceneMode", true);
+                SetRef(prestigePanel, "universeDnaText", universeDna);
+                SetRef(prestigePanel, "backToGameButton", backButton);
+                SetString(prestigePanel, "gameSceneName", GameSceneName);
+            }
         }
 
         private static void CreateAllPrestigeUpgradeDefinitions()
@@ -1331,10 +1426,19 @@ namespace Universes.Editor
             var defs = new[]
             {
                 LoadUpgradeDefinition("click_power"),
+                LoadUpgradeDefinition("click_power_percent"),
                 LoadUpgradeDefinition("passive_production"),
                 LoadUpgradeDefinition("star_stability"),
                 LoadUpgradeDefinition("supernova_bonus"),
-                LoadUpgradeDefinition("click_collect")
+                LoadUpgradeDefinition("click_collect"),
+                LoadUpgradeDefinition("max_star_count"),
+                LoadUpgradeDefinition("advanced_star_stability"),
+                LoadUpgradeDefinition("planet_passive_production"),
+                LoadUpgradeDefinition("star_passive_production_percent"),
+                LoadUpgradeDefinition("collision_dna_production"),
+                LoadUpgradeDefinition("entropy_reduction"),
+                LoadUpgradeDefinition("species_dna_production"),
+                LoadUpgradeDefinition("star_planet_click_value")
             };
 
             var rowInstances = new System.Collections.Generic.List<PrototypeUpgradeRow>();
@@ -1381,10 +1485,12 @@ namespace Universes.Editor
 
             var def = ScriptableObject.CreateInstance<PrototypeUpgradeDefinition>();
             def.upgradeType = PrototypeUpgradeType.ClickCollectRadius;
+            def.upgradeTier = GetDefaultUpgradeTier(PrototypeUpgradeType.ClickCollectRadius);
             def.displayName = "Click Collect";
             def.description = "Vacuum nearby Stardust anywhere you click (+0.45 radius per level)";
             def.baseCost = 22;
             def.costScale = 1.55;
+            def.maxLevel = GetDefaultUpgradeMaxLevel(PrototypeUpgradeType.ClickCollectRadius);
             AssetDatabase.CreateAsset(def, path);
             return def;
         }
@@ -1726,6 +1832,51 @@ namespace Universes.Editor
             }
         }
 
+        private static void SetBool(Object target, string field, bool value)
+        {
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(field);
+            if (prop != null)
+            {
+                prop.boolValue = value;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
+        private static void SetString(Object target, string field, string value)
+        {
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(field);
+            if (prop != null)
+            {
+                prop.stringValue = value;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
+        private static void EnsureSceneInBuildSettings(string scenePath)
+        {
+            if (string.IsNullOrWhiteSpace(scenePath))
+                return;
+
+            var scenes = EditorBuildSettings.scenes;
+            foreach (var scene in scenes)
+            {
+                if (scene.path == scenePath)
+                {
+                    scene.enabled = true;
+                    return;
+                }
+            }
+
+            var next = new EditorBuildSettingsScene[scenes.Length + 1];
+            for (var i = 0; i < scenes.Length; i++)
+                next[i] = scenes[i];
+
+            next[next.Length - 1] = new EditorBuildSettingsScene(scenePath, true);
+            EditorBuildSettings.scenes = next;
+        }
+
         private static void SetEnum(Object target, string field, int value)
         {
             var so = new SerializedObject(target);
@@ -1739,6 +1890,16 @@ namespace Universes.Editor
 
         private static void CreateSingleStarUpgradeDefinitions()
         {
+            CreateUpgradeDefinition(PrototypeUpgradeType.ClickPower, "click_power",
+                "Click Power", "More Stardust per click. Higher levels add bigger flat bonuses.");
+            CreateUpgradeDefinition(PrototypeUpgradeType.ClickPowerPercent, "click_power_percent",
+                "Click Power Percent", "Multiplies Stardust gained from star clicks by a percentage per level.");
+            CreateUpgradeDefinition(PrototypeUpgradeType.PassiveProduction, "passive_production",
+                "Passive Production", "More Stardust per second. Higher levels add bigger flat bonuses.");
+            CreateUpgradeDefinition(PrototypeUpgradeType.StarStability, "star_stability",
+                "Star Stability", "Star ages slower from clicks and passive");
+            CreateUpgradeDefinition(PrototypeUpgradeType.SupernovaBonus, "supernova_bonus",
+                "Supernova Bonus", "+15 Supernova reward per level");
             CreateUpgradeDefinition(PrototypeUpgradeType.MaxPlanetCount, "max_planet_count",
                 "Max Planet Count", "+1 max planet orbit slot per level");
             CreateUpgradeDefinition(PrototypeUpgradeType.AutoPlanetFormation, "auto_planet_formation",
@@ -1753,6 +1914,18 @@ namespace Universes.Editor
                 "Max Star Count", "Unlocks one additional active star slot per level, up to five stars.");
             CreateUpgradeDefinition(PrototypeUpgradeType.AdvancedStarStability, "advanced_star_stability",
                 "Advanced Star Stability", "Further slows star aging after basic stability is developed.");
+            CreateUpgradeDefinition(PrototypeUpgradeType.PlanetPassiveProduction, "planet_passive_production",
+                "Planet Passive Production", "Planets orbiting stars produce passive Stardust each tick.");
+            CreateUpgradeDefinition(PrototypeUpgradeType.StarPassiveProductionPercent, "star_passive_production_percent",
+                "Star Passive Production Percentage", "Increases each star's passive Stardust production by a percentage.");
+            CreateUpgradeDefinition(PrototypeUpgradeType.CollisionDnaProduction, "collision_dna_production",
+                "Collision DNA Production", "Increases DNA Potential gained when celestial objects collide.");
+            CreateUpgradeDefinition(PrototypeUpgradeType.EntropyReduction, "entropy_reduction",
+                "Entropy Reduction", "Reduces the rate at which entropy increases.");
+            CreateUpgradeDefinition(PrototypeUpgradeType.SpeciesDnaProduction, "species_dna_production",
+                "Species DNA Production", "Species generate passive DNA Potential on their home planets.");
+            CreateUpgradeDefinition(PrototypeUpgradeType.StarPlanetClickValue, "star_planet_click_value",
+                "Planet-Powered Clicks", "Stars gain click Stardust from each planet orbiting them.");
             CreateExpandUniverseDefinition();
         }
 
@@ -1765,6 +1938,7 @@ namespace Universes.Editor
 
             var def = ScriptableObject.CreateInstance<PrototypeUpgradeDefinition>();
             def.upgradeType = PrototypeUpgradeType.ExpandUniverse;
+            def.upgradeTier = GetDefaultUpgradeTier(PrototypeUpgradeType.ExpandUniverse);
             def.displayName = "Expand Universe";
             def.description =
                 "Unlock Step 2: Multi-Star System Age with star slots, buying new stars, independent star lifecycles, and planets around selected stars.";
@@ -1784,13 +1958,56 @@ namespace Universes.Editor
 
             var def = ScriptableObject.CreateInstance<PrototypeUpgradeDefinition>();
             def.upgradeType = type;
+            def.upgradeTier = GetDefaultUpgradeTier(type);
             def.displayName = displayName;
             def.description = description;
             def.baseCost = 20;
             def.costScale = 1.5;
+            def.maxLevel = GetDefaultUpgradeMaxLevel(type);
             AssetDatabase.CreateAsset(def, path);
             return def;
         }
+
+        private static int GetDefaultUpgradeMaxLevel(PrototypeUpgradeType type) => type switch
+        {
+            PrototypeUpgradeType.ClickPower => 25,
+            PrototypeUpgradeType.ClickPowerPercent => 15,
+            PrototypeUpgradeType.PassiveProduction => 20,
+            PrototypeUpgradeType.StarStability => 10,
+            PrototypeUpgradeType.SupernovaBonus => 10,
+            PrototypeUpgradeType.ClickCollectRadius => 5,
+            PrototypeUpgradeType.MaxPlanetCount => 5,
+            PrototypeUpgradeType.AutoPlanetFormation => 10,
+            PrototypeUpgradeType.PlanetDnaChance => 10,
+            PrototypeUpgradeType.PlanetClickValue => 20,
+            PrototypeUpgradeType.HabitablePlanetChance => 10,
+            PrototypeUpgradeType.MaxStarCount => 4,
+            PrototypeUpgradeType.AdvancedStarStability => 10,
+            PrototypeUpgradeType.PlanetPassiveProduction => 15,
+            PrototypeUpgradeType.StarPlanetClickValue => 15,
+            PrototypeUpgradeType.StarPassiveProductionPercent => 15,
+            PrototypeUpgradeType.CollisionDnaProduction => 15,
+            PrototypeUpgradeType.EntropyReduction => 10,
+            PrototypeUpgradeType.SpeciesDnaProduction => 15,
+            PrototypeUpgradeType.ExpandUniverse => 1,
+            _ => 0
+        };
+
+        private static int GetDefaultUpgradeTier(PrototypeUpgradeType type) => type switch
+        {
+            PrototypeUpgradeType.ClickPowerPercent => 2,
+            PrototypeUpgradeType.SupernovaBonus => 2,
+            PrototypeUpgradeType.ClickCollectRadius => 2,
+            PrototypeUpgradeType.MaxStarCount => 2,
+            PrototypeUpgradeType.AdvancedStarStability => 2,
+            PrototypeUpgradeType.PlanetPassiveProduction => 2,
+            PrototypeUpgradeType.StarPlanetClickValue => 2,
+            PrototypeUpgradeType.StarPassiveProductionPercent => 2,
+            PrototypeUpgradeType.CollisionDnaProduction => 2,
+            PrototypeUpgradeType.EntropyReduction => 2,
+            PrototypeUpgradeType.SpeciesDnaProduction => 2,
+            _ => 1
+        };
 
         private static GameObject RebuildSingleStarUpgradePanelPrefab()
         {
@@ -1854,6 +2071,7 @@ namespace Universes.Editor
             var defs = new[]
             {
                 LoadUpgradeDefinition("click_power"),
+                LoadUpgradeDefinition("click_power_percent"),
                 LoadUpgradeDefinition("passive_production"),
                 LoadUpgradeDefinition("star_stability"),
                 LoadUpgradeDefinition("max_planet_count"),
@@ -1863,6 +2081,12 @@ namespace Universes.Editor
                 LoadUpgradeDefinition("habitable_planet_chance"),
                 LoadUpgradeDefinition("max_star_count"),
                 LoadUpgradeDefinition("advanced_star_stability"),
+                LoadUpgradeDefinition("planet_passive_production"),
+                LoadUpgradeDefinition("star_passive_production_percent"),
+                LoadUpgradeDefinition("collision_dna_production"),
+                LoadUpgradeDefinition("entropy_reduction"),
+                LoadUpgradeDefinition("species_dna_production"),
+                LoadUpgradeDefinition("star_planet_click_value"),
                 LoadUpgradeDefinition("expand_universe")
             };
 

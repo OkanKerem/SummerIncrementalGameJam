@@ -15,12 +15,25 @@ namespace Universes.Prototype
 
         [Header("Planets")]
         [Min(0)] public double createPlanetCost = 30;
+        [Min(0f)] public float createPlanetCostIncreasePercent = 15f;
         [Min(1)] public int baseMaxPlanets = 2;
         [Min(0.1f)] public float baseOrbitRadius = 1.4f;
         [Min(0.05f)] public float orbitRadiusStep = 0.55f;
         [Min(1f)] public float orbitSpeed = 28f;
         [Min(0.1f)] public float basePlanetClickDamage = 8f;
         [Min(0f)] public float planetSpawnDelay = 0.45f;
+
+        [Header("Planet Orbit Lines")]
+        public bool showOrbitLines = true;
+        public Color orbitLineColor = new(0.55f, 0.75f, 1f, 0.22f);
+        [Min(0.001f)] public float orbitLineWidth = 0.025f;
+        [Range(16, 160)] public int orbitLineSegments = 72;
+        public int orbitLineSortingOrder = 0;
+
+        [Header("Camera Drag")]
+        public bool cameraDragEnabled = true;
+        [Range(0, 2)] public int cameraDragMouseButton = 1;
+        [Min(0f)] public float cameraDragSpeed = 1f;
 
         [Header("Auto Formation")]
         [Min(0.1f)] public float autoFormationCheckInterval = 3f;

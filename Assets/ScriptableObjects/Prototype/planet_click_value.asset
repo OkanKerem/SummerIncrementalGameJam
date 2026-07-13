@@ -13,7 +13,11 @@ MonoBehaviour:
   m_Name: planet_click_value
   m_EditorClassIdentifier: 
   upgradeType: 8
+  upgradeTier: 1
   displayName: Planet Click Value
   description: More Stardust when clicking planets
   baseCost: 20
   costScale: 1.5
+  maxLevel: 20
+  upgradePrerequisites: []
+  statPrerequisites: []

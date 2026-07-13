@@ -17,8 +17,10 @@ namespace Universes.Prototype
         private Transform _orbitCenter;
         private SpriteRenderer _sprite;
         private CircleCollider2D _collider;
+        private LineRenderer _orbitLine;
         private Vector3 _baseScale;
         private Coroutine _popRoutine;
+        private static Material _orbitLineMaterial;
 
         public PrototypePlanet Planet => _planet;
 
@@ -34,6 +36,7 @@ namespace Universes.Prototype
             ApplyDefinitionVisuals();
             RefreshVisual();
             UpdatePosition();
+            RefreshOrbitLine();
         }
 
         public void TickOrbit(float deltaTime)
@@ -43,6 +46,7 @@ namespace Universes.Prototype
 
             _planet.OrbitAngle += _manager.GetOrbitSpeed() * deltaTime;
             UpdatePosition();
+            RefreshOrbitLine();
         }
 
         private void ApplyDefinitionVisuals()
@@ -74,7 +78,7 @@ namespace Universes.Prototype
                 color = Color.Lerp(color, lifeTint, 0.45f);
             }
 
-            if (_planet.CivilizationStage >= PrototypeCivilizationStage.Civilization)
+            if (_planet.CivilizationStage >= PrototypeCivilizationStage.CivilizationPhase)
             {
                 var civTint = definition != null ? definition.civilizationTintColor : new Color(1f, 0.85f, 0.35f);
                 color = Color.Lerp(color, civTint, 0.25f);
@@ -101,6 +105,9 @@ namespace Universes.Prototype
             if (_collider != null)
                 _collider.enabled = _planet.IsAlive;
 
+            if (_orbitLine != null)
+                _orbitLine.enabled = _planet.IsAlive && (_manager == null || _manager.ShowOrbitLines);
+
             RefreshNameLabel();
         }
 
@@ -118,6 +125,61 @@ namespace Universes.Prototype
                     0f);
             transform.position = _orbitCenter.position + offset;
             RefreshNameLabel();
+        }
+
+        private void RefreshOrbitLine()
+        {
+            if (_planet == null || _orbitCenter == null || _manager == null || !_manager.ShowOrbitLines)
+            {
+                if (_orbitLine != null)
+                    _orbitLine.enabled = false;
+                return;
+            }
+
+            EnsureOrbitLine();
+            if (_orbitLine == null)
+                return;
+
+            var segments = Mathf.Max(16, _manager.OrbitLineSegments);
+            _orbitLine.enabled = _planet.IsAlive;
+            _orbitLine.positionCount = segments + 1;
+            _orbitLine.startWidth = _manager.OrbitLineWidth;
+            _orbitLine.endWidth = _manager.OrbitLineWidth;
+            _orbitLine.startColor = _manager.OrbitLineColor;
+            _orbitLine.endColor = _manager.OrbitLineColor;
+            _orbitLine.sortingOrder = _manager.OrbitLineSortingOrder;
+
+            for (var i = 0; i <= segments; i++)
+            {
+                var angle = (i / (float)segments) * 360f;
+                _orbitLine.SetPosition(i, _orbitCenter.position + _manager.GetOrbitOffset(_planet.OrbitRadius, angle));
+            }
+        }
+
+        private void EnsureOrbitLine()
+        {
+            if (_orbitLine != null)
+                return;
+
+            var go = new GameObject("OrbitLine");
+            go.transform.SetParent(transform, false);
+            _orbitLine = go.AddComponent<LineRenderer>();
+            _orbitLine.useWorldSpace = true;
+            _orbitLine.loop = false;
+            _orbitLine.textureMode = LineTextureMode.Stretch;
+            _orbitLine.numCornerVertices = 4;
+            _orbitLine.numCapVertices = 4;
+            _orbitLine.material = GetOrbitLineMaterial();
+        }
+
+        private static Material GetOrbitLineMaterial()
+        {
+            if (_orbitLineMaterial != null)
+                return _orbitLineMaterial;
+
+            var shader = Shader.Find("Sprites/Default") ?? Shader.Find("Universal Render Pipeline/Unlit");
+            _orbitLineMaterial = new Material(shader);
+            return _orbitLineMaterial;
         }
 
         private void RefreshNameLabel()

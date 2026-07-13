@@ -13,11 +13,12 @@ MonoBehaviour:
   m_Name: auto_planet_formation
   m_EditorClassIdentifier: 
   upgradeType: 6
+  upgradeTier: 1
   displayName: Auto Planet Formation
   description: Chance to spawn a free random planet over time
   baseCost: 20
   costScale: 1.5
-  maxLevel: 0
+  maxLevel: 10
   upgradePrerequisites:
   - upgradeType: 5
     requiredLevel: 2

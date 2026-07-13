@@ -124,6 +124,17 @@ namespace Universes.Prototype
 
         public void SetDriftEnabled(bool enabled) => _driftEnabled = enabled;
 
+        public void ConfigureDriftSpeed(float speed)
+        {
+            if (_driftVelocity.sqrMagnitude < 0.0001f)
+                _driftVelocity = Random.insideUnitCircle.normalized;
+
+            if (_driftVelocity.sqrMagnitude < 0.0001f)
+                _driftVelocity = Vector2.right;
+
+            _driftVelocity = _driftVelocity.normalized * Mathf.Max(0f, speed);
+        }
+
         public void TickDrift(float deltaTime, Vector2 minBounds, Vector2 maxBounds)
         {
             if (!IsInteractable || !_driftEnabled)
