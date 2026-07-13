@@ -30,6 +30,8 @@ namespace Universes.Prototype
         public ParticleSystem spawnEffectPrefab;
         public ParticleSystem clickEffectPrefab;
         public ParticleSystem destroyEffectPrefab;
+        [Tooltip("Used when this planet is destroyed by colliding with a planet from another star system. Falls back to Destroy Effect Prefab if empty.")]
+        public ParticleSystem crossStarCollisionDestroyEffectPrefab;
         public Color effectTint = Color.white;
         [Tooltip("Only this child ParticleSystem is tinted. Leave empty to use a PrototypePlanetEffectTintTarget marker on the prefab.")]
         public string effectTintChildName;

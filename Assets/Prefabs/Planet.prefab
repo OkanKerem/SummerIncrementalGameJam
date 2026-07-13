@@ -277,3 +277,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 73e65c310b004427a2e1b91184ca9969, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  nameLabel: {fileID: 4372918636181419047}
+  orbitEllipseScale: {x: 1.25, y: 0.58}

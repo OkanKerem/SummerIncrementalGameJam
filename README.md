@@ -1,55 +1,190 @@
-# Parallel Universes — Prototype
+# Cosmic Selection
 
-Minimal clicker prototype: click a star, earn Stardust, age the star, trigger a Supernova, create a new star.
+Cosmic Selection is an incremental universe-building game created for an Incremental Game Jam with the theme **Parallel Universes**.
 
-## Prototype step 2 — passive + upgrades
+The game is based on the idea that every universe eventually collapses, but the information, life, and cosmic structures inside it can survive as **Universe DNA**, allowing the next universe to become stronger.
 
-- **Passive:** star produces Stardust every second (Yellow +1, Orange +3, Red Giant +8) + upgrade bonus
-- Each passive tick also **ages the star** (+1 base, reduced by Star Stability)
-- **Upgrades** (persist across new stars): Click Power, Passive Production, Star Stability, Supernova Bonus
+## Core Idea
 
-### Existing scene
+The player starts with a single star and slowly builds a small star system around it.
 
-Run **Universes → Add Prototype Step 2 UI To Open Scene** to add the upgrade panel without rebuilding.
+By clicking stars and planets, the player earns **Stardust**, creates new planets, discovers life, and generates **DNA Potential**. Over time, stars age, planets may be damaged, civilizations may emerge, and the system eventually reaches its end.
 
-### Setup (Editor)
+When a star system collapses, its accumulated DNA Potential is converted into **Universe DNA**, which represents the inherited traits of previous universes.
 
-Use the Unity menu — everything is created **in the scene** so you can edit it in the Hierarchy/Inspector:
+## Gameplay Loop
 
-| Menu | What it does |
-|------|----------------|
-| **Universes → Create Prototype Star Prefab** | Creates `Star.prefab` once (skipped if it already exists) |
+The main gameplay loop is:
 
-| **Universes → Setup Prototype Scene** | New `PrototypeScene.unity` with all objects wired |
-| **Universes → Setup Prototype In Open Scene** | Adds prototype objects to the scene you have open |
+1. Click stars to collect Stardust.
+2. Use Stardust to create random planets.
+3. Click planets for extra Stardust, but be careful: planets can be damaged or destroyed.
+4. Some planets may develop life automatically.
+5. Life can evolve into civilizations over time.
+6. Civilizations generate DNA Potential.
+7. Stars age and eventually become Supernovas.
+8. The star system ends and DNA Potential becomes Universe DNA.
+9. Start a new, stronger universe.
 
-Edit **`Assets/Prefabs/Prototype/Star.prefab`** for glow size, sprites, collider, pop settings — runtime code reads those values and does not overwrite them.
+## Current Features
 
-Scene setup creates:
+* Incremental Stardust economy
+* Star clicking and passive Stardust production
+* Star aging system
+* Star stages:
 
-- `Main Camera` — orthographic, dark space background
-- `WorldRoot` — parent for spawned stars
-- `PrototypeGame` — `PrototypeGameController` (star prefab + world root assigned)
-- `Canvas` — HUD with stardust, stage, feedback, Create New Star button
-- `EventSystem`
-- `Assets/Prefabs/Prototype/Star.prefab` — star sprite + collider
+  * Yellow Star
+  * Orange Star
+  * Red Giant
+  * Supernova
+* Random planet generation
+* Different planet types with unique properties
+* Planet clicking with durability damage
+* Automatic life emergence
+* Automatic civilization progression
+* Procedural planet, species, and civilization names
+* DNA Potential system
+* Universe DNA tracking
+* Upgrade system
+* Upgrade prerequisites and unlock conditions
+* Multi-star progression with up to 5 stars
+* Configurable balance values to avoid hardcoded magic numbers
 
-After setup, tweak positions, colors, costs, etc. in the Inspector, then press **Play**.
+## Planet System
 
-## Play loop
+Planets are generated randomly and can have different properties such as Stardust value, durability, habitability, and DNA potential.
 
-1. Click the star → Stardust + age
-2. Star changes color: Yellow → Orange → Red Giant
-3. Age 100 → Supernova (+50 bonus), star destroyed
-4. **Create New Star** (20 Stardust) → new yellow star
+Example planet types include:
 
-| Age | Stage | Click reward |
-|-----|-------|--------------|
-| 0–33 | Yellow | +1 |
-| 34–66 | Orange | +3 |
-| 67–99 | Red Giant | +8 |
-| 100 | Supernova | +50 bonus |
+* Rocky Planet
+* Ocean Planet
+* Lava Planet
+* Ice Planet
+* Gas Giant
+* Toxic Planet
+* Crystal Planet
+* Desert Planet
+* Forest Planet
 
-## Full game
+Some planets are better for life, while others are better for short-term Stardust production.
 
-The full incremental game is under `Assets/Scripts/` — use **Universes → Setup Game (Full)** for that.
+## Life and Civilization
+
+Life can appear naturally on habitable planets.
+
+When life emerges, the game generates:
+
+* a planet name,
+* a species name,
+* a short discovery description,
+* later, a civilization name if the species develops further.
+
+Civilizations progress automatically. The player does not directly control species, cities, wars, diplomacy, or research.
+
+Civilization stages:
+
+* No Life
+* Life
+* Primitive Life
+* Tribe
+* Civilization
+* Industrial Age
+* Space Age
+
+This system is designed to make the universe feel alive without turning the game into a civilization management game.
+
+## Resources
+
+### Stardust
+
+Stardust is the main temporary currency of the current star system.
+
+It is used to:
+
+* create planets,
+* buy upgrades,
+* unlock more stars,
+* increase production,
+* improve planet and life chances.
+
+### DNA Potential
+
+DNA Potential is generated by planets with life and civilizations.
+
+It is not immediately spendable. It becomes Universe DNA when the current star system ends.
+
+### Universe DNA
+
+Universe DNA is the permanent legacy currency of collapsed universes.
+
+It represents the knowledge, life, and cosmic information inherited by future universes.
+
+## Upgrade System
+
+The game uses a step-by-step upgrade structure.
+
+Some upgrades are available immediately, while others require previous upgrades or gameplay milestones.
+
+Example unlock conditions:
+
+* Passive production may require Click Power level 5.
+* Auto planet formation may require higher planet capacity.
+* Planet DNA upgrades may require discovering life first.
+* Additional star slots require earlier progression.
+
+This keeps progression readable and prevents the game from becoming overwhelming too early.
+
+## Design Philosophy
+
+The game is designed around a simple idea:
+
+> Every universe dies, but its best traits live on.
+
+The player is not trying to prevent collapse forever. Instead, each universe creates a better foundation for the next one.
+
+The intended feeling is:
+
+* short-term Stardust vs long-term DNA,
+* exploiting planets vs letting life develop,
+* faster growth vs system instability,
+* small star system evolving toward larger cosmic structures.
+
+## Planned Features
+
+Future development may include:
+
+* Star collisions
+* Black holes
+* Black hole DNA generation
+* Supernova chain reactions
+* Larger cosmic scales
+* Galaxy-level progression
+* Parallel universe choices
+* Permanent Universe DNA upgrades
+* Multiple endings:
+
+  * Perfect Universe Ending
+  * Civilization Ascension Ending
+  * Multiverse Seed Ending
+
+## Controls
+
+* Click stars to gain Stardust.
+* Click planets to gain Stardust, but this damages them.
+* Use upgrade buttons to improve production and system growth.
+* Use Create Planet to generate random planets.
+* Use Create Star after unlocking additional star slots.
+
+## Development Notes
+
+This project is being developed step by step to keep the gameplay understandable and easy to balance.
+
+Existing future systems such as black holes, entropy, collapse, and cosmic events may exist in the codebase, but they are introduced gradually into the active gameplay loop.
+
+Most gameplay values should be configurable through balance configs or ScriptableObjects instead of being hardcoded directly in logic.
+
+## Credits
+
+Created by Okan Kerem Çıtak for an Incremental Game Jam.
+
+Theme: Parallel Universes

@@ -190,12 +190,16 @@ namespace Universes.Prototype
             if (controller == null)
                 return;
 
+            ApplyModeVisibility();
+
             if (stardustText != null)
                 stardustText.text = $"Stardust: {controller.Stardust:0}";
 
             if (dnaText != null)
             {
-                dnaText.text = controller.IsSingleStarMode
+                dnaText.text = controller.IsSingleStarMode ||
+                               (PrototypeGameplayFeatures.UsesMultiStar(GetGameplayMode()) &&
+                                !PrototypeGameplayFeatures.UsesUniverseCollapse(GetGameplayMode()))
                     ? $"DNA Potential: {controller.DnaPotential:0}"
                     : $"DNA Fragments: {controller.DnaFragments}";
             }

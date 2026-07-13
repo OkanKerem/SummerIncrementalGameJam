@@ -60,6 +60,7 @@ namespace Universes.Prototype
     public class PrototypeUpgradeDefinition : ScriptableObject
     {
         public PrototypeUpgradeType upgradeType;
+        [Min(1)] public int upgradeTier = 1;
         public string displayName = "Upgrade";
         [TextArea] public string description;
         public double baseCost = 15;
@@ -114,6 +115,7 @@ namespace Universes.Prototype
         public static string GetDisplayName(PrototypeUpgradeType type) => type switch
         {
             PrototypeUpgradeType.ClickPower => "Click Power",
+            PrototypeUpgradeType.ClickPowerPercent => "Click Power Percent",
             PrototypeUpgradeType.PassiveProduction => "Passive Star Production",
             PrototypeUpgradeType.StarStability => "Star Stability",
             PrototypeUpgradeType.SupernovaBonus => "Supernova Bonus",
@@ -126,6 +128,12 @@ namespace Universes.Prototype
             PrototypeUpgradeType.ExpandUniverse => "Expand Universe",
             PrototypeUpgradeType.MaxStarCount => "Max Star Count",
             PrototypeUpgradeType.AdvancedStarStability => "Advanced Star Stability",
+            PrototypeUpgradeType.PlanetPassiveProduction => "Planet Passive Production",
+            PrototypeUpgradeType.StarPlanetClickValue => "Planet-Powered Clicks",
+            PrototypeUpgradeType.StarPassiveProductionPercent => "Star Passive Production Percentage",
+            PrototypeUpgradeType.CollisionDnaProduction => "Collision DNA Production",
+            PrototypeUpgradeType.EntropyReduction => "Entropy Reduction",
+            PrototypeUpgradeType.SpeciesDnaProduction => "Species DNA Production",
             _ => type.ToString()
         };
     }

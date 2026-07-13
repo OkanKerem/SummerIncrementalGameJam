@@ -13,11 +13,12 @@ MonoBehaviour:
   m_Name: supernova_bonus
   m_EditorClassIdentifier: 
   upgradeType: 3
+  upgradeTier: 2
   displayName: Supernova Bonus
   description: +15 Supernova reward per level
   baseCost: 40
   costScale: 1.55
-  maxLevel: 0
+  maxLevel: 10
   upgradePrerequisites: []
   statPrerequisites:
   - statType: 4

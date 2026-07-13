@@ -13,11 +13,12 @@ MonoBehaviour:
   m_Name: passive_production
   m_EditorClassIdentifier: 
   upgradeType: 1
+  upgradeTier: 1
   displayName: Passive Production
-  description: More Stardust per second (+1 per level)
+  description: More Stardust per second. Higher levels add bigger flat bonuses.
   baseCost: 25
   costScale: 1.55
-  maxLevel: 0
+  maxLevel: 20
   upgradePrerequisites:
   - upgradeType: 0
     requiredLevel: 5

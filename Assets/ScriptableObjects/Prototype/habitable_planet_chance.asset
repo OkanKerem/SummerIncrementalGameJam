@@ -13,11 +13,12 @@ MonoBehaviour:
   m_Name: habitable_planet_chance
   m_EditorClassIdentifier: 
   upgradeType: 9
+  upgradeTier: 1
   displayName: Habitable Planet Chance
   description: New planets are more likely to support life
   baseCost: 20
   costScale: 1.5
-  maxLevel: 0
+  maxLevel: 10
   upgradePrerequisites:
   - upgradeType: 5
     requiredLevel: 1

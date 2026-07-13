@@ -3,12 +3,10 @@ namespace Universes.Prototype
     public enum PrototypeCivilizationStage
     {
         NoLife,
-        Life,
         PrimitiveLife,
-        Tribe,
-        Civilization,
-        IndustrialAge,
-        SpaceAge
+        CivilizationPhase,
+        SpacePhase,
+        HardSpace
     }
 
     public static class PrototypeCivilizationUtility

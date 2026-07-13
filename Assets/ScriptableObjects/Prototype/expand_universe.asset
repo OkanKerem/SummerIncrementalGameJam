@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: expand_universe
   m_EditorClassIdentifier: 
   upgradeType: 10
+  upgradeTier: 1
   displayName: Expand Universe
   description: 'Unlock Step 2: Multi-Star System Age with star slots, buying new stars,
     independent star lifecycles, and planets around selected stars.'

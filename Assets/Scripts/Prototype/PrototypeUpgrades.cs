@@ -14,12 +14,20 @@ namespace Universes.Prototype
         HabitablePlanetChance,
         ExpandUniverse,
         MaxStarCount,
-        AdvancedStarStability
+        AdvancedStarStability,
+        ClickPowerPercent,
+        PlanetPassiveProduction,
+        StarPlanetClickValue,
+        StarPassiveProductionPercent,
+        CollisionDnaProduction,
+        EntropyReduction,
+        SpeciesDnaProduction
     }
 
     public class PrototypeUpgrades
     {
         public int ClickPowerLevel { get; private set; }
+        public int ClickPowerPercentLevel { get; private set; }
         public int PassiveProductionLevel { get; private set; }
         public int StarStabilityLevel { get; private set; }
         public int SupernovaBonusLevel { get; private set; }
@@ -32,6 +40,12 @@ namespace Universes.Prototype
         public int UniverseExpandedLevel { get; private set; }
         public int MaxStarCountLevel { get; private set; }
         public int AdvancedStarStabilityLevel { get; private set; }
+        public int PlanetPassiveProductionLevel { get; private set; }
+        public int StarPlanetClickValueLevel { get; private set; }
+        public int StarPassiveProductionPercentLevel { get; private set; }
+        public int CollisionDnaProductionLevel { get; private set; }
+        public int EntropyReductionLevel { get; private set; }
+        public int SpeciesDnaProductionLevel { get; private set; }
 
         public bool IsUniverseExpanded => UniverseExpandedLevel > 0;
 
@@ -42,6 +56,7 @@ namespace Universes.Prototype
             type switch
             {
                 PrototypeUpgradeType.ClickPower => ClickPowerLevel,
+                PrototypeUpgradeType.ClickPowerPercent => ClickPowerPercentLevel,
                 PrototypeUpgradeType.PassiveProduction => PassiveProductionLevel,
                 PrototypeUpgradeType.StarStability => StarStabilityLevel,
                 PrototypeUpgradeType.SupernovaBonus => SupernovaBonusLevel,
@@ -54,11 +69,29 @@ namespace Universes.Prototype
                 PrototypeUpgradeType.ExpandUniverse => UniverseExpandedLevel,
                 PrototypeUpgradeType.MaxStarCount => MaxStarCountLevel,
                 PrototypeUpgradeType.AdvancedStarStability => AdvancedStarStabilityLevel,
+                PrototypeUpgradeType.PlanetPassiveProduction => PlanetPassiveProductionLevel,
+                PrototypeUpgradeType.StarPlanetClickValue => StarPlanetClickValueLevel,
+                PrototypeUpgradeType.StarPassiveProductionPercent => StarPassiveProductionPercentLevel,
+                PrototypeUpgradeType.CollisionDnaProduction => CollisionDnaProductionLevel,
+                PrototypeUpgradeType.EntropyReduction => EntropyReductionLevel,
+                PrototypeUpgradeType.SpeciesDnaProduction => SpeciesDnaProductionLevel,
                 _ => 0
             };
 
         public double GetCost(PrototypeUpgradeDefinition definition) =>
             definition != null ? definition.GetCost(GetLevel(definition)) : double.MaxValue;
+
+        public int GetClickPowerBonus(PrototypeUpgradeBalanceConfig balance)
+        {
+            balance ??= new PrototypeUpgradeBalanceConfig();
+            return GetCumulativeLevelBonus(ClickPowerLevel, balance.clickPowerBaseIncrement);
+        }
+
+        public int GetPassiveProductionBonus(PrototypeUpgradeBalanceConfig balance)
+        {
+            balance ??= new PrototypeUpgradeBalanceConfig();
+            return GetCumulativeLevelBonus(PassiveProductionLevel, balance.passiveProductionBaseIncrement);
+        }
 
         public bool TryPurchase(PrototypeUpgradeDefinition definition, ref double stardust)
         {
@@ -77,6 +110,7 @@ namespace Universes.Prototype
             switch (definition.upgradeType)
             {
                 case PrototypeUpgradeType.ClickPower: ClickPowerLevel++; break;
+                case PrototypeUpgradeType.ClickPowerPercent: ClickPowerPercentLevel++; break;
                 case PrototypeUpgradeType.PassiveProduction: PassiveProductionLevel++; break;
                 case PrototypeUpgradeType.StarStability: StarStabilityLevel++; break;
                 case PrototypeUpgradeType.SupernovaBonus: SupernovaBonusLevel++; break;
@@ -89,6 +123,12 @@ namespace Universes.Prototype
                 case PrototypeUpgradeType.ExpandUniverse: UniverseExpandedLevel++; break;
                 case PrototypeUpgradeType.MaxStarCount: MaxStarCountLevel++; break;
                 case PrototypeUpgradeType.AdvancedStarStability: AdvancedStarStabilityLevel++; break;
+                case PrototypeUpgradeType.PlanetPassiveProduction: PlanetPassiveProductionLevel++; break;
+                case PrototypeUpgradeType.StarPlanetClickValue: StarPlanetClickValueLevel++; break;
+                case PrototypeUpgradeType.StarPassiveProductionPercent: StarPassiveProductionPercentLevel++; break;
+                case PrototypeUpgradeType.CollisionDnaProduction: CollisionDnaProductionLevel++; break;
+                case PrototypeUpgradeType.EntropyReduction: EntropyReductionLevel++; break;
+                case PrototypeUpgradeType.SpeciesDnaProduction: SpeciesDnaProductionLevel++; break;
             }
 
             return true;
@@ -105,9 +145,18 @@ namespace Universes.Prototype
             return balance.baseClickCollectRadius + ClickCollectRadiusLevel * balance.clickCollectRadiusPerLevel;
         }
 
+        private static int GetCumulativeLevelBonus(int level, int baseIncrement)
+        {
+            if (level <= 0 || baseIncrement <= 0)
+                return 0;
+
+            return level * (level + 1) / 2 * baseIncrement;
+        }
+
         public void Reset()
         {
             ClickPowerLevel = 0;
+            ClickPowerPercentLevel = 0;
             PassiveProductionLevel = 0;
             StarStabilityLevel = 0;
             SupernovaBonusLevel = 0;
@@ -120,6 +169,12 @@ namespace Universes.Prototype
             UniverseExpandedLevel = 0;
             MaxStarCountLevel = 0;
             AdvancedStarStabilityLevel = 0;
+            PlanetPassiveProductionLevel = 0;
+            StarPlanetClickValueLevel = 0;
+            StarPassiveProductionPercentLevel = 0;
+            CollisionDnaProductionLevel = 0;
+            EntropyReductionLevel = 0;
+            SpeciesDnaProductionLevel = 0;
         }
 
         public void SetUniverseExpanded(bool expanded) =>

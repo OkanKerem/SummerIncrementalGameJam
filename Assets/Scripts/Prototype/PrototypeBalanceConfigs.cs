@@ -37,13 +37,13 @@ namespace Universes.Prototype
         [Min(0f)] public float highAggressionClickStardustMultiplier = 1.1f;
 
         [Header("Risk")]
-        public PrototypeCivilizationStage selfDamageMinimumStage = PrototypeCivilizationStage.IndustrialAge;
-        public PrototypeCivilizationStage selfDestructionMinimumStage = PrototypeCivilizationStage.IndustrialAge;
+        public PrototypeCivilizationStage selfDamageMinimumStage = PrototypeCivilizationStage.SpacePhase;
+        public PrototypeCivilizationStage selfDestructionMinimumStage = PrototypeCivilizationStage.HardSpace;
         [Range(0f, 1f)] public float mediumAggressionSelfDamageChance = 0.0025f;
         [Range(0f, 1f)] public float highAggressionSelfDamageChance = 0.01f;
         [Range(0f, 1f)] public float highAggressionSelfDestructionChance = 0.001f;
         [Min(0f)] public float aggressionSelfDamageAmount = 4f;
-        public PrototypeCivilizationStage selfDestructionRegressToStage = PrototypeCivilizationStage.Life;
+        public PrototypeCivilizationStage selfDestructionRegressToStage = PrototypeCivilizationStage.PrimitiveLife;
 
         public int RollTrait() =>
             UnityEngine.Random.Range(Mathf.Min(minimumTraitValue, maximumTraitValue),
@@ -352,15 +352,6 @@ namespace Universes.Prototype
             },
             new()
             {
-                stage = PrototypeCivilizationStage.Life,
-                stageName = "Life",
-                progressRequirement = 1f,
-                stageDnaValue = 0.2f,
-                stageClickBonusMultiplier = 1.05f,
-                stageSelfDestructionRiskMultiplier = 0f
-            },
-            new()
-            {
                 stage = PrototypeCivilizationStage.PrimitiveLife,
                 stageName = "Primitive Life",
                 progressRequirement = 1f,
@@ -370,41 +361,42 @@ namespace Universes.Prototype
             },
             new()
             {
-                stage = PrototypeCivilizationStage.Tribe,
-                stageName = "Tribe",
-                progressRequirement = 1f,
-                stageDnaValue = 0.55f,
-                stageClickBonusMultiplier = 1.1f,
-                stageSelfDestructionRiskMultiplier = 0f
-            },
-            new()
-            {
-                stage = PrototypeCivilizationStage.Civilization,
-                stageName = "Civilization",
-                progressRequirement = 1f,
-                stageDnaValue = 0.85f,
-                stageClickBonusMultiplier = 1.1f,
+                stage = PrototypeCivilizationStage.CivilizationPhase,
+                stageName = "Civilization Phase",
+                progressRequirement = 1.25f,
+                stageDnaValue = 0.9f,
+                stageClickBonusMultiplier = 1.12f,
                 stageSelfDestructionRiskMultiplier = 0.5f
             },
             new()
             {
-                stage = PrototypeCivilizationStage.IndustrialAge,
-                stageName = "Industrial Age",
-                progressRequirement = 1f,
-                stageDnaValue = 1.25f,
-                stageClickBonusMultiplier = 1.15f,
-                stageSelfDestructionRiskMultiplier = 1f
-            },
-            new()
-            {
-                stage = PrototypeCivilizationStage.SpaceAge,
-                stageName = "Space Age",
-                progressRequirement = 1f,
+                stage = PrototypeCivilizationStage.SpacePhase,
+                stageName = "Space Phase",
+                progressRequirement = 1.5f,
                 stageDnaValue = 2f,
                 stageClickBonusMultiplier = 1.15f,
                 stageSelfDestructionRiskMultiplier = 1.5f
+            },
+            new()
+            {
+                stage = PrototypeCivilizationStage.HardSpace,
+                stageName = "Hard Space",
+                progressRequirement = 2f,
+                stageDnaValue = 3.5f,
+                stageClickBonusMultiplier = 1.25f,
+                stageSelfDestructionRiskMultiplier = 2f
             }
         };
+
+        [Header("Space Travel")]
+        public PrototypeCivilizationStage spaceshipMinimumStage = PrototypeCivilizationStage.SpacePhase;
+        public GameObject spaceshipPrefab;
+        public Sprite[] spaceshipSprites = Array.Empty<Sprite>();
+        public GameObject spaceshipAlienPortraitPrefab;
+        [Min(0.1f)] public float spaceshipTripInterval = 4f;
+        [Min(0.1f)] public float spaceshipSpeed = 2.5f;
+        [Min(0f)] public float spaceshipDnaPotentialPerTrip = 1f;
+        [Min(1)] public int maxActiveSpaceships = 3;
 
         public PrototypeCivilizationStageConfig GetStageConfig(PrototypeCivilizationStage stage)
         {
@@ -436,17 +428,24 @@ namespace Universes.Prototype
             Mathf.Max(0f, GetStageConfig(stage)?.stageSelfDestructionRiskMultiplier ?? 0f);
 
         public bool CanProgress(PrototypeCivilizationStage stage) =>
-            stage < PrototypeCivilizationStage.SpaceAge;
+            stage < PrototypeCivilizationStage.HardSpace;
     }
 
     [Serializable]
     public class PrototypeUpgradeBalanceConfig
     {
+        [Min(0)] public int clickPowerBaseIncrement = 1;
+        [Min(0)] public int passiveProductionBaseIncrement = 1;
         [Min(0)] public int supernovaBonusPerLevel = 15;
+        [Min(0f)] public float clickRewardPercentPerLevel = 0.08f;
         [Min(0f)] public float starStabilityAgeGainReductionPerLevel = 0.25f;
         [Min(0f)] public float advancedStarStabilityAgeGainReductionPerLevel = 0.15f;
         [Min(0f)] public float baseClickCollectRadius = 1.1f;
         [Min(0f)] public float clickCollectRadiusPerLevel = 0.45f;
+        [Min(0f)] public float starPassiveProductionPercentPerLevel = 0.1f;
+        [Min(0f)] public float collisionDnaPotentialPerLevel = 1f;
+        [Range(0f, 1f)] public float entropyReductionPerLevel = 0.08f;
+        [Min(0f)] public float speciesDnaPotentialPerLevel = 0.25f;
     }
 
     [Serializable]
@@ -456,8 +455,43 @@ namespace Universes.Prototype
         [Min(1)] public int maxStarSlots = 5;
         [Min(0)] public double createStarBaseCost = 75;
         [Min(1)] public double createStarCostScale = 1.65;
+        [Min(0f)] public float createStarCostIncreasePercent = 65f;
         [Min(0)] public int supernovaStardustBonus = 50;
         [Range(0f, 1f)] public float supernovaPlanetDestroyChance = 0.35f;
         [Min(0f)] public float supernovaPlanetDamage = 45f;
+        [Min(0f)] public float supernovaNearbyStarRadius = 4f;
+        [Min(0f)] public float supernovaNearbyStarAgeDamage = 18f;
+
+        [Header("Planet Consequences")]
+        [Min(0f)] public float planetDeathStarAgeDamage = 4f;
+        [Min(0f)] public float planetDeathDnaPotential = 1f;
+        [Min(0f)] public float planetDeathEntropy = 1.5f;
+        [Min(0f)] public float planetCollisionDistance = 0.45f;
+        [Min(0f)] public float planetCollisionDnaPotential = 4f;
+        [Min(0f)] public float planetCollisionEntropy = 5f;
+        [Min(0f)] public float planetOverloadAgeGainPerPlanet = 0.08f;
+        [Min(0)] public int planetCountBeforeOverload = 2;
+
+        [Header("Planet Production")]
+        [Min(0f)] public float basePlanetPassiveStardust = 1f;
+        [Min(0f)] public float planetPassiveStardustPerUpgradeLevel = 0.35f;
+        [Min(0f)] public float starClickValuePerPlanetPerUpgradeLevel = 0.5f;
+        [Min(0f)] public float entropyPerActiveStarPerSecond = 0.015f;
+        [Min(0f)] public float entropyPerPlanetPerSecond = 0.01f;
+
+        [Header("Camera")]
+        [Min(0.1f)] public float phase1CameraSize = 5f;
+        [Min(0.1f)] public float phase2CameraStartSize = 5f;
+        [Min(0.1f)] public float phase2CameraTargetSize = 10f;
+        [Min(0f)] public float phase2CameraZoomDuration = 1.25f;
+
+        [Header("Star Layout")]
+        public Vector2 spawnAreaMin = new(-7.5f, -4f);
+        public Vector2 spawnAreaMax = new(7.5f, 4f);
+        [Min(0f)] public float minStarSeparation = 2.5f;
+
+        [Header("Star Movement")]
+        [Min(0f)] public float starDriftSpeed = 0.035f;
+        public bool moveCentralStarInPhase2 = true;
     }
 }
