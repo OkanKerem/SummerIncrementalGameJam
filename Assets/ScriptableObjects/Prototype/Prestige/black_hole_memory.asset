@@ -14,5 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 4
   displayName: Black Hole Memory
+  iconSprite: {fileID: -310020832471473445, guid: 5d98eaa74baa7b14584a057b54a43a18, type: 3}
   description: Black Holes generate more DNA potential while alive.
   maxLevel: 0
+  prerequisites:
+  - upgradeType: 3
+    requiredLevel: 1

@@ -423,8 +423,8 @@ namespace Universes.Prototype
 
         public float GetProductionMultiplier() => PrototypePrestigeModifiers.GetProductionMultiplier(Prestige);
 
-        public float GetParticleEvolutionChance() =>
-            PrototypePrestigeModifiers.GetParticleEvolutionChance(Prestige);
+        public float GetDoubleStardustChance() =>
+            PrototypePrestigeModifiers.GetDoubleStardustChance(Prestige);
 
         public float GetBlackHoleDnaMultiplier() =>
             PrototypePrestigeModifiers.GetBlackHoleDnaMultiplier(Prestige);
@@ -558,16 +558,18 @@ namespace Universes.Prototype
             sfxManager?.PlayStarClick();
             effectManager?.PlayClickEffect(star.transform.position, stage);
 
+            double creditedReward;
             if (IsSingleStarMode)
-                CreditStardustDirect(reward);
+                creditedReward = CreditStardustDirect(reward);
             else if (PrototypeGameplayFeatures.UsesParticleVacuum(gameplayMode))
             {
                 EmitStardust(reward, star.transform.position, stage);
+                creditedReward = reward;
             }
             else
-                CreditStardustDirect(reward);
+                creditedReward = CreditStardustDirect(reward);
 
-            floatingTextSpawner?.Spawn(star.transform.position, reward, stage);
+            floatingTextSpawner?.Spawn(star.transform.position, Mathf.RoundToInt((float)creditedReward), stage);
             RunStats.RecordClick();
 
             star.AddAge(GetAgePerClick(), GetEffectiveAgeGainMultiplier(star));
@@ -584,10 +586,12 @@ namespace Universes.Prototype
                 NotifyStateChanged();
         }
 
-        public void CreditStardustDirect(double amount)
+        public double CreditStardustDirect(double amount)
         {
             if (IsRunEnded || amount <= 0)
-                return;
+                return 0;
+
+            amount = ApplyDoubleStardustChance(amount);
 
             Stardust += amount;
             RunStats.RecordStardustProduced(amount);
@@ -597,6 +601,13 @@ namespace Universes.Prototype
 
             OnStardustGained?.Invoke((int)amount);
             NotifyStateChanged();
+            return amount;
+        }
+
+        private double ApplyDoubleStardustChance(double amount)
+        {
+            var chance = Mathf.Clamp01(GetDoubleStardustChance());
+            return chance > 0f && UnityEngine.Random.value < chance ? amount * 2.0 : amount;
         }
 
         public bool SpendStardust(double amount)
@@ -689,9 +700,9 @@ namespace Universes.Prototype
 
         public void StartNewStarSystem() => StartNewRun(resetPrestigeBonuses: false);
 
-        public void CreditStardust(double amount)
+        public double CreditStardust(double amount)
         {
-            CreditStardustDirect(amount);
+            return CreditStardustDirect(amount);
         }
 
         public void CreditDnaFragment()
@@ -803,7 +814,7 @@ namespace Universes.Prototype
                 effectManager?.PlayStardustEmitEffect(position, stage);
 
             if (particleManager != null)
-                particleManager.EmitStardustBurst(amount, position, stage, GetParticleEvolutionChance());
+                particleManager.EmitStardustBurst(amount, position, stage);
             else
                 CreditStardust(amount);
         }

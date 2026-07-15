@@ -35,6 +35,9 @@ namespace Universes.Editor
         private const string SunSpritePath = "Assets/Art/Sprites/Sun/sun1.png";
         private const string Sun2SpritePath = "Assets/Art/Sprites/Sun/sun2.png";
         private const string ArtPath = "Assets/Art/Sprites";
+        private static readonly Vector2 PrestigeTreeNodeSize = new(190f, 54f);
+        private static readonly Vector2 PrestigeTreeContentSize = new(760f, 700f);
+        private static readonly Color PrestigeTreeLineColor = new(0.28f, 0.5f, 0.68f, 0.65f);
 
         [MenuItem("Universes/Add Prototype Step 4 UI To Open Scene")]
         public static void AddStep4UiToOpenScene()
@@ -168,7 +171,7 @@ namespace Universes.Editor
             EnsureFolder(PrototypePrestigeFolder);
             EnsureFolder("Assets/Prefabs/Prototype");
             CreateAllPrestigeUpgradeDefinitions();
-            LoadOrCreatePrestigeRowPrefab();
+            RebuildPrestigeRowPrefab();
             RebuildPrestigePanelPrefab();
             AssetDatabase.SaveAssets();
             Debug.Log($"Prestige assets ready under {PrototypePrestigeFolder} and {PrestigePanelPrefabPath}.");
@@ -181,8 +184,8 @@ namespace Universes.Editor
             EnsureFolder(PrototypePrestigeFolder);
             EnsureFolder("Assets/Prefabs/Prototype");
             CreateAllPrestigeUpgradeDefinitions();
-            LoadOrCreatePrestigeRowPrefab();
-            LoadOrCreatePrestigePanelPrefab();
+            RebuildPrestigeRowPrefab();
+            RebuildPrestigePanelPrefab();
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             BuildPrestigeScene();
@@ -304,7 +307,7 @@ namespace Universes.Editor
         {
             EnsureFolder("Assets/Prefabs/Prototype");
             LoadOrCreateClickCollectUpgrade();
-            LoadOrCreateUpgradeRowPrefab();
+            RebuildUpgradeRowPrefab();
             RebuildUpgradePanelPrefab();
             AssetDatabase.SaveAssets();
             Debug.Log($"Upgrade prefabs ready at {UpgradeRowPrefabPath} and {UpgradePanelPrefabPath}. Re-run Step 2 UI menu on your scene if the panel was already placed.");
@@ -824,7 +827,7 @@ namespace Universes.Editor
             prestigeRect.anchorMax = new Vector2(0.5f, 1f);
             prestigeRect.pivot = new Vector2(0.5f, 0.5f);
             prestigeRect.anchoredPosition = new Vector2(0f, -24f);
-            prestigeRect.sizeDelta = new Vector2(720f, -170f);
+            prestigeRect.sizeDelta = new Vector2(900f, -170f);
 
             var prestigePanel = prestigeGo.GetComponent<PrototypePrestigePanel>();
             if (prestigePanel != null)
@@ -840,37 +843,65 @@ namespace Universes.Editor
         {
             CreatePrestigeDefinition(PrototypePrestigeUpgradeType.StrongerBigBang, "stronger_big_bang",
                 "Stronger Big Bang", "New universes start with bonus Stardust.");
-            CreatePrestigeDefinition(PrototypePrestigeUpgradeType.StablePhysics, "stable_physics",
-                "Stable Physics", "Reduces Entropy gain from all sources.");
-            CreatePrestigeDefinition(PrototypePrestigeUpgradeType.LongerStarLifespan, "longer_star_lifespan",
-                "Longer Star Lifespan", "Stars age more slowly from clicks and passive production.");
-            CreatePrestigeDefinition(PrototypePrestigeUpgradeType.SupernovaMemory, "supernova_memory",
-                "Supernova Memory", "Supernovas are more likely to create DNA Fragments.");
-            CreatePrestigeDefinition(PrototypePrestigeUpgradeType.BlackHoleMemory, "black_hole_memory",
-                "Black Hole Memory", "Black Holes generate more DNA potential while alive.");
             CreatePrestigeDefinition(PrototypePrestigeUpgradeType.CosmicEfficiency, "cosmic_efficiency",
-                "Cosmic Efficiency", "Increases all Stardust production.");
+                "Cosmic Efficiency", "Increases all Stardust production.",
+                Req(PrototypePrestigeUpgradeType.StrongerBigBang, 1));
+            CreatePrestigeDefinition(PrototypePrestigeUpgradeType.StablePhysics, "stable_physics",
+                "Stable Physics", "Reduces Entropy gain from all sources.",
+                Req(PrototypePrestigeUpgradeType.StrongerBigBang, 1));
+            CreatePrestigeDefinition(PrototypePrestigeUpgradeType.LongerStarLifespan, "longer_star_lifespan",
+                "Longer Star Lifespan", "Stars age more slowly from clicks and passive production.",
+                Req(PrototypePrestigeUpgradeType.StablePhysics, 1));
+            CreatePrestigeDefinition(PrototypePrestigeUpgradeType.SupernovaMemory, "supernova_memory",
+                "Supernova Memory", "Supernovas are more likely to create DNA Fragments.",
+                Req(PrototypePrestigeUpgradeType.CosmicEfficiency, 1));
+            CreatePrestigeDefinition(PrototypePrestigeUpgradeType.BlackHoleMemory, "black_hole_memory",
+                "Black Hole Memory", "Black Holes generate more DNA potential while alive.",
+                Req(PrototypePrestigeUpgradeType.SupernovaMemory, 1));
             CreatePrestigeDefinition(PrototypePrestigeUpgradeType.ParticleEvolution, "particle_evolution",
-                "Particle Evolution", "Higher chance for stars to produce larger Stardust particles.");
+                "Particle Evolution", "Higher chance for Stardust gains to be doubled.",
+                Req(PrototypePrestigeUpgradeType.CosmicEfficiency, 2));
             CreatePrestigeDefinition(PrototypePrestigeUpgradeType.ParallelEcho, "parallel_echo",
-                "Parallel Echo", "Past collapsed universes echo passive Stardust into the new universe.");
+                "Parallel Echo", "Past collapsed universes echo passive Stardust into the new universe.",
+                Req(PrototypePrestigeUpgradeType.BlackHoleMemory, 1),
+                Req(PrototypePrestigeUpgradeType.LongerStarLifespan, 1));
         }
 
         private static PrototypePrestigeUpgradeDefinition CreatePrestigeDefinition(
-            PrototypePrestigeUpgradeType type, string assetName, string displayName, string description)
+            PrototypePrestigeUpgradeType type, string assetName, string displayName, string description,
+            params PrototypePrestigeUpgradeRequirement[] prerequisites)
         {
             var path = $"{PrototypePrestigeFolder}/{assetName}.asset";
             var existing = AssetDatabase.LoadAssetAtPath<PrototypePrestigeUpgradeDefinition>(path);
             if (existing != null)
+            {
+                ApplyPrestigeDefinitionDefaults(existing, type, displayName, description, prerequisites);
                 return existing;
+            }
 
             var def = ScriptableObject.CreateInstance<PrototypePrestigeUpgradeDefinition>();
+            ApplyPrestigeDefinitionDefaults(def, type, displayName, description, prerequisites);
+            AssetDatabase.CreateAsset(def, path);
+            return def;
+        }
+
+        private static PrototypePrestigeUpgradeRequirement Req(PrototypePrestigeUpgradeType type, int level) =>
+            new()
+            {
+                upgradeType = type,
+                requiredLevel = level
+            };
+
+        private static void ApplyPrestigeDefinitionDefaults(PrototypePrestigeUpgradeDefinition def,
+            PrototypePrestigeUpgradeType type, string displayName, string description,
+            PrototypePrestigeUpgradeRequirement[] prerequisites)
+        {
             def.upgradeType = type;
             def.displayName = displayName;
             def.description = description;
             def.maxLevel = 0;
-            AssetDatabase.CreateAsset(def, path);
-            return def;
+            def.prerequisites = prerequisites ?? System.Array.Empty<PrototypePrestigeUpgradeRequirement>();
+            EditorUtility.SetDirty(def);
         }
 
         private static PrototypePrestigeUpgradeDefinition LoadPrestigeDefinition(string assetName) =>
@@ -892,6 +923,17 @@ namespace Universes.Editor
             return prefab;
         }
 
+        private static GameObject RebuildPrestigeRowPrefab()
+        {
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            CreateAllPrestigeUpgradeDefinitions();
+            var definition = LoadPrestigeDefinition("stronger_big_bang");
+            var row = BuildPrestigeRowObject(font, "Prestige Row", definition);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(row, PrestigeRowPrefabPath);
+            Object.DestroyImmediate(row);
+            return prefab;
+        }
+
         private static GameObject LoadOrCreatePrestigePanelPrefab()
         {
             var existing = AssetDatabase.LoadAssetAtPath<GameObject>(PrestigePanelPrefabPath);
@@ -903,9 +945,6 @@ namespace Universes.Editor
 
         private static GameObject RebuildPrestigePanelPrefab()
         {
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(PrestigePanelPrefabPath) != null)
-                AssetDatabase.DeleteAsset(PrestigePanelPrefabPath);
-
             return BuildPrestigePanelPrefab();
         }
 
@@ -952,29 +991,27 @@ namespace Universes.Editor
             var content = new GameObject("Content");
             content.transform.SetParent(viewport.transform, false);
             var contentRect = content.AddComponent<RectTransform>();
-            contentRect.anchorMin = new Vector2(0, 1);
-            contentRect.anchorMax = new Vector2(1, 1);
+            contentRect.anchorMin = new Vector2(0.5f, 1f);
+            contentRect.anchorMax = new Vector2(0.5f, 1f);
             contentRect.pivot = new Vector2(0.5f, 1);
-            contentRect.sizeDelta = new Vector2(0, 0);
-            var vlg = content.AddComponent<VerticalLayoutGroup>();
-            vlg.spacing = 8;
-            vlg.padding = new RectOffset(4, 4, 4, 4);
-            vlg.childForceExpandHeight = false;
-            content.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            contentRect.sizeDelta = PrestigeTreeContentSize;
 
             scroll.content = contentRect;
             scroll.viewport = viewport.GetComponent<RectTransform>();
             scroll.horizontal = false;
+            scroll.vertical = true;
+
+            var tooltipRoot = BuildPrestigeTooltip(panelGo.transform, font, out var tooltipText);
 
             var defs = new[]
             {
                 LoadPrestigeDefinition("stronger_big_bang"),
-                LoadPrestigeDefinition("stable_physics"),
-                LoadPrestigeDefinition("longer_star_lifespan"),
-                LoadPrestigeDefinition("supernova_memory"),
-                LoadPrestigeDefinition("black_hole_memory"),
                 LoadPrestigeDefinition("cosmic_efficiency"),
+                LoadPrestigeDefinition("stable_physics"),
+                LoadPrestigeDefinition("supernova_memory"),
+                LoadPrestigeDefinition("longer_star_lifespan"),
                 LoadPrestigeDefinition("particle_evolution"),
+                LoadPrestigeDefinition("black_hole_memory"),
                 LoadPrestigeDefinition("parallel_echo")
             };
 
@@ -989,9 +1026,14 @@ namespace Universes.Editor
                 var row = rowInstance.GetComponent<PrototypePrestigeUpgradeRow>();
                 var so = new SerializedObject(row);
                 so.FindProperty("definition").objectReferenceValue = def;
+                so.FindProperty("tooltipRoot").objectReferenceValue = tooltipRoot;
+                so.FindProperty("tooltipText").objectReferenceValue = tooltipText;
                 so.ApplyModifiedPropertiesWithoutUndo();
+                PositionPrestigeTreeRow(rowInstance.GetComponent<RectTransform>(), def.upgradeType);
                 rowInstances.Add(row);
             }
+
+            AddPrestigeTreeLines(content.transform);
 
             var panelComp = panelGo.AddComponent<PrototypePrestigePanel>();
             var panelSo = new SerializedObject(panelComp);
@@ -1000,6 +1042,8 @@ namespace Universes.Editor
             for (var i = 0; i < rowInstances.Count; i++)
                 rowsProp.GetArrayElementAtIndex(i).objectReferenceValue = rowInstances[i];
             panelSo.FindProperty("panelRoot").objectReferenceValue = panelGo;
+            panelSo.FindProperty("tooltipRoot").objectReferenceValue = tooltipRoot;
+            panelSo.FindProperty("tooltipText").objectReferenceValue = tooltipText;
             panelSo.ApplyModifiedPropertiesWithoutUndo();
 
             var prefab = PrefabUtility.SaveAsPrefabAsset(panelGo, PrestigePanelPrefabPath);
@@ -1007,61 +1051,169 @@ namespace Universes.Editor
             return prefab;
         }
 
+        private static void PositionPrestigeTreeRow(RectTransform rect, PrototypePrestigeUpgradeType type)
+        {
+            if (rect == null)
+                return;
+
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.sizeDelta = PrestigeTreeNodeSize;
+            rect.anchoredPosition = GetPrestigeTreePosition(type);
+        }
+
+        private static void AddPrestigeTreeLines(Transform content)
+        {
+            var linesRoot = new GameObject("TreeConnections", typeof(RectTransform));
+            linesRoot.transform.SetParent(content, false);
+            var rootRect = linesRoot.GetComponent<RectTransform>();
+            rootRect.anchorMin = Vector2.zero;
+            rootRect.anchorMax = Vector2.one;
+            rootRect.offsetMin = Vector2.zero;
+            rootRect.offsetMax = Vector2.zero;
+            rootRect.SetAsFirstSibling();
+
+            AddPrestigeTreeLine(linesRoot.transform, PrototypePrestigeUpgradeType.StrongerBigBang,
+                PrototypePrestigeUpgradeType.CosmicEfficiency);
+            AddPrestigeTreeLine(linesRoot.transform, PrototypePrestigeUpgradeType.StrongerBigBang,
+                PrototypePrestigeUpgradeType.StablePhysics);
+            AddPrestigeTreeLine(linesRoot.transform, PrototypePrestigeUpgradeType.CosmicEfficiency,
+                PrototypePrestigeUpgradeType.SupernovaMemory);
+            AddPrestigeTreeLine(linesRoot.transform, PrototypePrestigeUpgradeType.CosmicEfficiency,
+                PrototypePrestigeUpgradeType.ParticleEvolution);
+            AddPrestigeTreeLine(linesRoot.transform, PrototypePrestigeUpgradeType.StablePhysics,
+                PrototypePrestigeUpgradeType.LongerStarLifespan);
+            AddPrestigeTreeLine(linesRoot.transform, PrototypePrestigeUpgradeType.SupernovaMemory,
+                PrototypePrestigeUpgradeType.BlackHoleMemory);
+            AddPrestigeTreeLine(linesRoot.transform, PrototypePrestigeUpgradeType.BlackHoleMemory,
+                PrototypePrestigeUpgradeType.ParallelEcho);
+            AddPrestigeTreeLine(linesRoot.transform, PrototypePrestigeUpgradeType.LongerStarLifespan,
+                PrototypePrestigeUpgradeType.ParallelEcho);
+        }
+
+        private static GameObject BuildPrestigeTooltip(Transform parent, Font font, out Text tooltipText)
+        {
+            var tooltipGo = new GameObject("PrestigeTooltip", typeof(RectTransform));
+            tooltipGo.transform.SetParent(parent, false);
+            var rect = tooltipGo.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(1f, 0.5f);
+            rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.pivot = new Vector2(1f, 0.5f);
+            rect.anchoredPosition = new Vector2(-12f, 0f);
+            rect.sizeDelta = new Vector2(300f, 220f);
+            var image = tooltipGo.AddComponent<Image>();
+            image.color = new Color(0.04f, 0.055f, 0.08f, 0.96f);
+            image.raycastTarget = false;
+
+            tooltipText = CreateText(tooltipGo.transform, "", font, 14);
+            tooltipText.name = "TooltipText";
+            tooltipText.alignment = TextAnchor.UpperLeft;
+            tooltipText.color = new Color(0.85f, 0.92f, 1f);
+            tooltipText.raycastTarget = false;
+            var textRect = tooltipText.rectTransform;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(12f, 10f);
+            textRect.offsetMax = new Vector2(-12f, -10f);
+
+            tooltipGo.SetActive(false);
+            return tooltipGo;
+        }
+
+        private static void AddPrestigeTreeLine(Transform parent, PrototypePrestigeUpgradeType from,
+            PrototypePrestigeUpgradeType to)
+        {
+            var start = GetPrestigeTreeNodeCenter(from);
+            var end = GetPrestigeTreeNodeCenter(to);
+            var direction = end - start;
+            var length = direction.magnitude;
+            if (length <= 0.01f)
+                return;
+
+            var lineGo = new GameObject($"{from}_To_{to}", typeof(RectTransform));
+            lineGo.transform.SetParent(parent, false);
+            var rect = lineGo.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = (start + end) * 0.5f;
+            rect.sizeDelta = new Vector2(length, 3f);
+            rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg);
+
+            var image = lineGo.AddComponent<Image>();
+            image.color = PrestigeTreeLineColor;
+            image.raycastTarget = false;
+        }
+
+        private static Vector2 GetPrestigeTreeNodeCenter(PrototypePrestigeUpgradeType type)
+        {
+            var position = GetPrestigeTreePosition(type);
+            return position + new Vector2(0f, -PrestigeTreeNodeSize.y * 0.5f);
+        }
+
+        private static Vector2 GetPrestigeTreePosition(PrototypePrestigeUpgradeType type) => type switch
+        {
+            PrototypePrestigeUpgradeType.StrongerBigBang => new Vector2(0f, -8f),
+            PrototypePrestigeUpgradeType.CosmicEfficiency => new Vector2(-180f, -112f),
+            PrototypePrestigeUpgradeType.StablePhysics => new Vector2(180f, -112f),
+            PrototypePrestigeUpgradeType.SupernovaMemory => new Vector2(-290f, -216f),
+            PrototypePrestigeUpgradeType.ParticleEvolution => new Vector2(-70f, -216f),
+            PrototypePrestigeUpgradeType.LongerStarLifespan => new Vector2(220f, -216f),
+            PrototypePrestigeUpgradeType.BlackHoleMemory => new Vector2(-290f, -320f),
+            PrototypePrestigeUpgradeType.ParallelEcho => new Vector2(0f, -424f),
+            _ => Vector2.zero
+        };
+
         private static GameObject BuildPrestigeRowObject(Font font, string objectName,
             PrototypePrestigeUpgradeDefinition definition)
         {
             var title = definition != null ? definition.displayName : "Prestige Upgrade";
-            var description = definition != null ? definition.description : string.Empty;
 
             var row = new GameObject(objectName, typeof(RectTransform));
-            var layout = row.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 4;
-            layout.childForceExpandHeight = false;
-            layout.padding = new RectOffset(6, 6, 6, 6);
-            var rowLayout = row.AddComponent<LayoutElement>();
-            rowLayout.minHeight = 104;
-
             var bg = row.AddComponent<Image>();
             bg.color = new Color(0.08f, 0.12f, 0.14f, 0.95f);
+            var button = row.AddComponent<Button>();
+
+            var iconImage = CreateUpgradeIcon(row.transform, "Icon", new Vector2(34f, 34f));
 
             var titleText = CreateText(row.transform, $"{title} (Lv 0)", font, 14);
             titleText.fontStyle = FontStyle.Bold;
-            titleText.alignment = TextAnchor.UpperLeft;
-            titleText.gameObject.AddComponent<LayoutElement>().minHeight = 20;
-
-            var descText = CreateText(row.transform, description, font, 11);
-            descText.color = new Color(0.7f, 0.78f, 0.85f);
-            descText.alignment = TextAnchor.UpperLeft;
-            descText.gameObject.AddComponent<LayoutElement>().minHeight = 28;
-
-            var effectText = CreateText(row.transform, "", font, 11);
-            effectText.color = new Color(0.55f, 0.95f, 0.75f);
-            effectText.alignment = TextAnchor.UpperLeft;
-            effectText.gameObject.AddComponent<LayoutElement>().minHeight = 18;
-
-            var btnGo = new GameObject("BuyButton", typeof(RectTransform));
-            btnGo.transform.SetParent(row.transform, false);
-            btnGo.AddComponent<LayoutElement>().minHeight = 30;
-            var btnImg = btnGo.AddComponent<Image>();
-            btnImg.color = new Color(0.22f, 0.38f, 0.28f);
-            var btn = btnGo.AddComponent<Button>();
-
-            var costText = CreateText(btnGo.transform, "Buy (1 DNA)", font, 12);
-            costText.alignment = TextAnchor.MiddleCenter;
-            Stretch(costText.rectTransform);
+            titleText.alignment = TextAnchor.MiddleCenter;
+            var titleRect = titleText.rectTransform;
+            titleRect.anchorMin = Vector2.zero;
+            titleRect.anchorMax = Vector2.one;
+            titleRect.offsetMin = new Vector2(42f, 0f);
+            titleRect.offsetMax = new Vector2(-8f, 0f);
 
             var rowComp = row.AddComponent<PrototypePrestigeUpgradeRow>();
             var so = new SerializedObject(rowComp);
             so.FindProperty("definition").objectReferenceValue = definition;
             so.FindProperty("titleText").objectReferenceValue = titleText;
-            so.FindProperty("descriptionText").objectReferenceValue = descText;
-            so.FindProperty("effectText").objectReferenceValue = effectText;
-            so.FindProperty("buyButton").objectReferenceValue = btn;
-            so.FindProperty("costText").objectReferenceValue = costText;
-            so.FindProperty("buttonImage").objectReferenceValue = btnImg;
+            so.FindProperty("iconImage").objectReferenceValue = iconImage;
+            so.FindProperty("buyButton").objectReferenceValue = button;
+            so.FindProperty("buttonImage").objectReferenceValue = bg;
             so.ApplyModifiedPropertiesWithoutUndo();
 
             return row;
+        }
+
+        private static Image CreateUpgradeIcon(Transform parent, string objectName, Vector2 size)
+        {
+            var iconGo = new GameObject(objectName, typeof(RectTransform));
+            iconGo.transform.SetParent(parent, false);
+            var rect = iconGo.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0.5f);
+            rect.anchorMax = new Vector2(0f, 0.5f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.anchoredPosition = new Vector2(8f, 0f);
+            rect.sizeDelta = size;
+
+            var image = iconGo.AddComponent<Image>();
+            image.enabled = false;
+            image.preserveAspect = true;
+            image.raycastTarget = false;
+            return image;
         }
 
         private static void BuildUpgradePanel(GameObject canvasGo, PrototypeGameController controller)
@@ -1360,11 +1512,18 @@ namespace Universes.Editor
             return BuildUpgradePanelPrefab();
         }
 
+        private static GameObject RebuildUpgradeRowPrefab()
+        {
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var definition = LoadUpgradeDefinition("click_power");
+            var row = BuildUpgradeRowObject(font, "Upgrade Row", definition);
+            var prefab = PrefabUtility.SaveAsPrefabAsset(row, UpgradeRowPrefabPath);
+            Object.DestroyImmediate(row);
+            return prefab;
+        }
+
         private static GameObject RebuildUpgradePanelPrefab()
         {
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(UpgradePanelPrefabPath) != null)
-                AssetDatabase.DeleteAsset(UpgradePanelPrefabPath);
-
             return BuildUpgradePanelPrefab();
         }
 
@@ -1512,10 +1671,26 @@ namespace Universes.Editor
             var bg = row.AddComponent<Image>();
             bg.color = new Color(0.1f, 0.12f, 0.18f, 0.9f);
 
-            var titleText = CreateText(row.transform, $"{title} (Lv 0)", font, 14);
+            var headerGo = new GameObject("Header", typeof(RectTransform));
+            headerGo.transform.SetParent(row.transform, false);
+            headerGo.AddComponent<LayoutElement>().minHeight = 32;
+            var headerLayout = headerGo.AddComponent<HorizontalLayoutGroup>();
+            headerLayout.spacing = 6;
+            headerLayout.childAlignment = TextAnchor.MiddleLeft;
+            headerLayout.childControlWidth = false;
+            headerLayout.childControlHeight = false;
+            headerLayout.childForceExpandWidth = false;
+            headerLayout.childForceExpandHeight = false;
+
+            var iconImage = CreateUpgradeIcon(headerGo.transform, "Icon", new Vector2(28f, 28f));
+            iconImage.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
+
+            var titleText = CreateText(headerGo.transform, $"{title} (Lv 0)", font, 14);
             titleText.fontStyle = FontStyle.Bold;
             titleText.alignment = TextAnchor.UpperLeft;
-            titleText.gameObject.AddComponent<LayoutElement>().minHeight = 20;
+            var titleLayout = titleText.gameObject.AddComponent<LayoutElement>();
+            titleLayout.minHeight = 20;
+            titleLayout.preferredWidth = 230f;
 
             var descText = CreateText(row.transform, description, font, 11);
             descText.color = new Color(0.75f, 0.8f, 0.9f);
@@ -1538,6 +1713,7 @@ namespace Universes.Editor
             so.FindProperty("definition").objectReferenceValue = definition;
             so.FindProperty("titleText").objectReferenceValue = titleText;
             so.FindProperty("descriptionText").objectReferenceValue = descText;
+            so.FindProperty("iconImage").objectReferenceValue = iconImage;
             so.FindProperty("buyButton").objectReferenceValue = btn;
             so.FindProperty("costText").objectReferenceValue = costText;
             so.FindProperty("buttonImage").objectReferenceValue = btnImg;
@@ -2012,11 +2188,8 @@ namespace Universes.Editor
         private static GameObject RebuildSingleStarUpgradePanelPrefab()
         {
             CreateSingleStarUpgradeDefinitions();
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(UpgradePanelPrefabPath) != null)
-                AssetDatabase.DeleteAsset(UpgradePanelPrefabPath);
-
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            var rowPrefab = LoadOrCreateUpgradeRowPrefab();
+            var rowPrefab = RebuildUpgradeRowPrefab();
 
             var panelGo = new GameObject("UpgradePanel");
             var panelRect = panelGo.AddComponent<RectTransform>();

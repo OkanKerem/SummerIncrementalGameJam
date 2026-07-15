@@ -28,6 +28,9 @@ namespace Universes.Prototype
             if (definition.maxLevel > 0 && level >= definition.maxLevel)
                 return false;
 
+            if (!definition.ArePrerequisitesMet(this, out _))
+                return false;
+
             var cost = PrototypePrestigeModifiers.GetUpgradeCost(level);
             if (UniverseDna < cost)
                 return false;

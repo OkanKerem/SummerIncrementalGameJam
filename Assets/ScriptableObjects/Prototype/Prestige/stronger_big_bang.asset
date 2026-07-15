@@ -14,5 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 0
   displayName: Stronger Big Bang
+  iconSprite: {fileID: -4178046375966092550, guid: a3316e672116c114fb87c1c8c39e8b91, type: 3}
   description: New universes start with bonus Stardust.
   maxLevel: 0
+  prerequisites: []

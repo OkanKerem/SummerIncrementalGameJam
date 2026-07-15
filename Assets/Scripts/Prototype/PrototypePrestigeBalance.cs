@@ -13,7 +13,7 @@ namespace Universes.Prototype
         public const float CosmicEfficiencyPerLevel = 0.1f;
         public const float SupernovaMemoryDnaBonusPerLevel = 0.05f;
         public const float BlackHoleMemoryMultiplierPerLevel = 0.25f;
-        public const float ParticleEvolutionChancePerLevel = 0.08f;
+        public const float DoubleStardustChancePerLevel = 0.08f;
         public const float ParallelEchoPerCollapsePerLevel = 0.05f;
     }
 }

@@ -48,10 +48,10 @@ namespace Universes.Prototype
             return 1f + level * PrototypePrestigeBalance.BlackHoleMemoryMultiplierPerLevel;
         }
 
-        public static float GetParticleEvolutionChance(PrototypePrestigeState prestige)
+        public static float GetDoubleStardustChance(PrototypePrestigeState prestige)
         {
             var level = prestige.GetLevel(PrototypePrestigeUpgradeType.ParticleEvolution);
-            return level * PrototypePrestigeBalance.ParticleEvolutionChancePerLevel;
+            return level * PrototypePrestigeBalance.DoubleStardustChancePerLevel;
         }
 
         public static double GetParallelEchoPerSecond(PrototypePrestigeState prestige)
@@ -83,7 +83,7 @@ namespace Universes.Prototype
                 PrototypePrestigeUpgradeType.CosmicEfficiency =>
                     $"Stardust production x{1f + level * PrototypePrestigeBalance.CosmicEfficiencyPerLevel:0.00}",
                 PrototypePrestigeUpgradeType.ParticleEvolution =>
-                    $"{level * PrototypePrestigeBalance.ParticleEvolutionChancePerLevel * 100f:0}% chance for larger particles",
+                    $"{level * PrototypePrestigeBalance.DoubleStardustChancePerLevel * 100f:0}% chance for 2x Stardust",
                 PrototypePrestigeUpgradeType.ParallelEcho =>
                     $"+{GetParallelEchoPerSecondForLevel(level, 1):0.00} Stardust/s per past collapse",
                 _ => definition.description

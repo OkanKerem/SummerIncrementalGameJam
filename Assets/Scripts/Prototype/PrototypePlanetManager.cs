@@ -171,9 +171,9 @@ namespace Universes.Prototype
             var reward = _controller.GetPlanetClickReward(planet);
             var damage = _controller.GetPlanetClickDamage();
 
-            _controller.CreditStardustDirect(reward);
+            var creditedReward = _controller.CreditStardustDirect(reward);
             _controller.RunStats.RecordPlanetClick();
-            _controller.FloatingTextSpawner?.Spawn(view.transform.position, reward, view.GetDisplayColor());
+            _controller.FloatingTextSpawner?.Spawn(view.transform.position, Mathf.RoundToInt((float)creditedReward), view.GetDisplayColor());
             _controller.SfxManager?.PlayPlanetClick();
             planet.Damage(damage);
             view.RefreshVisual();

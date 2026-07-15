@@ -8,6 +8,7 @@ namespace Universes.Prototype
         [SerializeField] private PrototypeUpgradeDefinition definition;
         [SerializeField] private Text titleText;
         [SerializeField] private Text descriptionText;
+        [SerializeField] private Image iconImage;
         [SerializeField] private Button buyButton;
         [SerializeField] private Text costText;
         [SerializeField] private Image buttonImage;
@@ -30,6 +31,8 @@ namespace Universes.Prototype
 
             if (descriptionText != null && !string.IsNullOrEmpty(definition.description))
                 descriptionText.text = definition.description;
+
+            RefreshIcon();
 
             if (buyButton != null)
             {
@@ -94,6 +97,8 @@ namespace Universes.Prototype
             if (descriptionText != null && !string.IsNullOrEmpty(definition.description))
                 descriptionText.text = definition.description;
 
+            RefreshIcon();
+
             var step2Ready = PrototypeGameplayFeatures.Step2ExpansionAvailable;
             var cost = _controller.Upgrades.GetCost(definition);
             var canAfford = _controller.Stardust >= cost;
@@ -135,6 +140,8 @@ namespace Universes.Prototype
                 descriptionText.text = BuildDescription(level, atMax, unlocked, requirementText);
             }
 
+            RefreshIcon();
+
             if (costText != null)
                 costText.text = atMax ? "Max" : unlocked ? $"Buy ({cost:0})" : "Locked";
 
@@ -151,6 +158,16 @@ namespace Universes.Prototype
         {
             var tierPrefix = definition.upgradeTier > 1 ? $"Level {definition.upgradeTier} - " : string.Empty;
             return $"{tierPrefix}{definition.displayName} (Lv {level})";
+        }
+
+        private void RefreshIcon()
+        {
+            if (iconImage == null || definition == null)
+                return;
+
+            iconImage.sprite = definition.iconSprite;
+            iconImage.enabled = definition.iconSprite != null;
+            iconImage.preserveAspect = true;
         }
 
         private string BuildDescription(int level, bool atMax, bool unlocked, string requirementText)

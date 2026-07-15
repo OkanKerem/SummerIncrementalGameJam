@@ -14,5 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 6
   displayName: Particle Evolution
-  description: Higher chance for stars to produce larger Stardust particles.
+  iconSprite: {fileID: 0}
+description: Higher chance for Stardust gains to be doubled.
   maxLevel: 0
+  prerequisites:
+  - upgradeType: 5
+    requiredLevel: 2

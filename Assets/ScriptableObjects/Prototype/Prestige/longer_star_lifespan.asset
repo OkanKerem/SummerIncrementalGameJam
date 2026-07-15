@@ -14,5 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 2
   displayName: Longer Star Lifespan
+  iconSprite: {fileID: -3546920206682040002, guid: 7632a2ff85edcc946902f504f7d77a70, type: 3}
   description: Stars age more slowly from clicks and passive production.
   maxLevel: 0
+  prerequisites:
+  - upgradeType: 1
+    requiredLevel: 1

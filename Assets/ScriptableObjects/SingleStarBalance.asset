@@ -27,7 +27,7 @@ MonoBehaviour:
   basePlanetClickDamage: 8
   planetSpawnDelay: 1
   showOrbitLines: 1
-  orbitLineColor: {r: 0.55, g: 0.75, b: 1, a: 0.22}
+  orbitLineColor: {r: 0.55, g: 0.75, b: 1, a: 0.14901961}
   orbitLineWidth: 0.025
   orbitLineSegments: 72
   orbitLineSortingOrder: 0

@@ -62,6 +62,7 @@ namespace Universes.Prototype
         public PrototypeUpgradeType upgradeType;
         [Min(1)] public int upgradeTier = 1;
         public string displayName = "Upgrade";
+        public Sprite iconSprite;
         [TextArea] public string description;
         public double baseCost = 15;
         public double costScale = 1.55;

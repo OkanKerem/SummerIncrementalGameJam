@@ -3,11 +3,15 @@
   "WorkspaceRootPath": "C:\\Users\\okank\\universes\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{9A707261-4298-6C46-276F-ADE3A6F6727A}|Assembly-CSharp.csproj|c:\\users\\okank\\universes\\assets\\scripts\\prototype\\prototypeparticleeffectmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{9A707261-4298-6C46-276F-ADE3A6F6727A}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\prototype\\prototypeparticleeffectmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{9A707261-4298-6C46-276F-ADE3A6F6727A}|Assembly-CSharp.csproj|c:\\users\\okank\\universes\\assets\\scripts\\prototype\\prototypespeciesentryview.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{9A707261-4298-6C46-276F-ADE3A6F6727A}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\prototype\\prototypespeciesentryview.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{9A707261-4298-6C46-276F-ADE3A6F6727A}|Assembly-CSharp.csproj|c:\\users\\okank\\universes\\assets\\scripts\\stars\\starmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{9A707261-4298-6C46-276F-ADE3A6F6727A}|Assembly-CSharp.csproj|C:\\Users\\okank\\universes\\assets\\scripts\\stars\\starmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{9A707261-4298-6C46-276F-ADE3A6F6727A}|Assembly-CSharp.csproj|solutionrelative:assets\\scripts\\stars\\starmanager.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
@@ -27,6 +31,19 @@
             {
               "$type": "Document",
               "DocumentIndex": 0,
+              "Title": "PrototypeParticleEffectManager.cs",
+              "DocumentMoniker": "C:\\Users\\okank\\universes\\Assets\\Scripts\\Prototype\\PrototypeParticleEffectManager.cs",
+              "RelativeDocumentMoniker": "Assets\\Scripts\\Prototype\\PrototypeParticleEffectManager.cs",
+              "ToolTip": "C:\\Users\\okank\\universes\\Assets\\Scripts\\Prototype\\PrototypeParticleEffectManager.cs",
+              "RelativeToolTip": "Assets\\Scripts\\Prototype\\PrototypeParticleEffectManager.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-07-13T13:03:25.106Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
               "Title": "PrototypeSpeciesEntryView.cs",
               "DocumentMoniker": "C:\\Users\\okank\\universes\\Assets\\Scripts\\Prototype\\PrototypeSpeciesEntryView.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Prototype\\PrototypeSpeciesEntryView.cs",
@@ -39,7 +56,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "StarManager.cs",
               "DocumentMoniker": "C:\\Users\\okank\\universes\\Assets\\Scripts\\Stars\\StarManager.cs",
               "RelativeDocumentMoniker": "Assets\\Scripts\\Stars\\StarManager.cs",
@@ -47,8 +64,7 @@
               "RelativeToolTip": "Assets\\Scripts\\Stars\\StarManager.cs",
               "ViewState": "AgIAACMAAAAAAAAAAAAWwD8AAABmAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2026-07-05T09:17:22.346Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-07-05T09:17:22.346Z"
             }
           ]
         }
