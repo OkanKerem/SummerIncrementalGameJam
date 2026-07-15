@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9651ab9c3f36bd41b12e34048e152c7, type: 3}
+  m_Name: supernova_memory
+  m_EditorClassIdentifier: 
+  upgradeType: 3
+  displayName: Supernova Memory
+  iconSprite: {fileID: -3820215144114945063, guid: bf94a98e5ed8a994c9b08052125e642f, type: 3}
+  description: Supernovas are more likely to create DNA Fragments.
+  maxLevel: 0
+  prerequisites:
+  - upgradeType: 0
+    requiredLevel: 1

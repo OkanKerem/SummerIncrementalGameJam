@@ -12,11 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 69661fbca7b5bf54495c0c21e6a66acc, type: 3}
   m_Name: SingleStarBalance
   m_EditorClassIdentifier: 
-  maxStarHealth: 400
+  maxStarHealth: 100
   agePerClick: 1
   agePerPassiveTick: 1
   passiveTickInterval: 1
-  baseClickReward: 10
+  baseClickReward: 1
   basePassivePerSecond: 1
   createPlanetCost: 30
   createPlanetCostIncreasePercent: 15
@@ -242,6 +242,10 @@ MonoBehaviour:
     phase2CameraStartSize: 5
     phase2CameraTargetSize: 10
     phase2CameraZoomDuration: 1.25
+    minZoom: 3
+    phase1MaxZoom: 10
+    phase2MaxZoom: 10
+    phase3MaxZoom: 15
     spawnAreaMin: {x: -15, y: -8}
     spawnAreaMax: {x: 15, y: 8}
     minStarSeparation: 4
