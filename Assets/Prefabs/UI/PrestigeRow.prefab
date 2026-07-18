@@ -221,3 +221,5 @@ MonoBehaviour:
   tooltipText: {fileID: 0}
   enabledButtonColor: {r: 0.22, g: 0.38, b: 0.28, a: 1}
   disabledButtonColor: {r: 0.15, g: 0.15, b: 0.18, a: 1}
+  enabledIconColor: {r: 1, g: 1, b: 1, a: 1}
+  disabledIconColor: {r: 0.42, g: 0.42, b: 0.48, a: 0.55}

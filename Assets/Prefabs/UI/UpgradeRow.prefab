@@ -33,10 +33,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 2992934570092419873}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -40.056, y: 32.685}
-  m_SizeDelta: {x: 185.9663, y: 27.6531}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 89.942, y: -13.82655}
+  m_SizeDelta: {x: 179.88, y: 27.6531}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4011078859043817984
 CanvasRenderer:
@@ -316,8 +316,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 222.55, y: -47}
-  m_SizeDelta: {x: 69.2468, y: 68.1437}
+  m_AnchoredPosition: {x: 79.97905, y: -57.681}
+  m_SizeDelta: {x: 148.36, y: 36.9222}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1426328299662064058
 MonoBehaviour:
@@ -461,8 +461,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 36.848606, y: -13.211}
-  m_SizeDelta: {x: 270, y: 90}
+  m_AnchoredPosition: {x: -8.2096, y: -13.211}
+  m_SizeDelta: {x: 179.8835, y: 90}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &7205398263678690055
 MonoBehaviour:
@@ -563,8 +563,11 @@ MonoBehaviour:
   definition: {fileID: 11400000, guid: a1b2c3d4e5f6478990a1b2c3d4e5f601, type: 2}
   titleText: {fileID: 5194656473911145036}
   descriptionText: {fileID: 6163115654405374402}
+  iconImage: {fileID: 0}
   buyButton: {fileID: 4846713342518463762}
   costText: {fileID: 1544918889605348873}
   buttonImage: {fileID: 6425676544526469171}
+  tooltipRoot: {fileID: 0}
+  tooltipText: {fileID: 0}
   enabledButtonColor: {r: 0.18, g: 0.32, b: 0.5, a: 1}
   disabledButtonColor: {r: 0.15, g: 0.15, b: 0.18, a: 1}

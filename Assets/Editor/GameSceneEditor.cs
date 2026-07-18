@@ -16,8 +16,10 @@ namespace Universes.Editor
         private const string PrestigeSceneName = "PrestigeScene";
         private const string GameSceneName = "GameScene";
         private const string PrefabPath = "Assets/Prefabs/Star.prefab";
-        private const string UpgradeRowPrefabPath = "Assets/Prefabs/UpgradeRow.prefab";
-        private const string UpgradePanelPrefabPath = "Assets/Prefabs/UpgradePanel.prefab";
+        private const string UpgradeRowPrefabPath = "Assets/Prefabs/UI/UpgradeRow.prefab";
+        private const string UpgradePanelPrefabPath = "Assets/Prefabs/UI/UpgradePanel.prefab";
+        private const string CollapseSingularityPrefabPath = "Assets/Prefabs/CollapseSingularity.prefab";
+        private const string BlackHolePrefabPath = "Assets/Prefabs/BlackHole.prefab";
         private const string StardustParticlePrefabPath = "Assets/Prefabs/StardustParticle.prefab";
         private const string DnaParticlePrefabPath = "Assets/Prefabs/DnaParticle.prefab";
         private const string ClickEffectPrefabPath = "Assets/Prefabs/ClickEffect.prefab";
@@ -28,6 +30,13 @@ namespace Universes.Editor
         private const string PrestigeRowPrefabPath = "Assets/Prefabs/UI/PrestigeRow.prefab";
         private const string PrestigePanelPrefabPath = "Assets/Prefabs/UI/PrestigePanel.prefab";
         private const string PlanetPrefabPath = "Assets/Prefabs/Planet.prefab";
+        private const string SpaceStationPrefabPath = "Assets/Prefabs/SpaceStation.prefab";
+        private const string SpaceShipPrefabPath = "Assets/Prefabs/SpaceShip.prefab";
+        private const string DestroyRocketPrefabPath = "Assets/Prefabs/DestroyRocket.prefab";
+        private const string AlienImagePrefabPath = "Assets/Prefabs/Alien Variant.prefab";
+        private const string SettingsPanelPrefabPath = "Assets/Prefabs/UI/SettingsPanel.prefab";
+        private const string MainMenuScenePath = "Assets/Scenes/MainMenu.unity";
+        private const string MainMenuSceneName = "MainMenu";
         private const string SpeciesEntryPrefabPath = "Assets/Prefabs/SpeciesEntry.prefab";
         private const string PlanetTypesFolder = "Assets/ScriptableObjects/Planets";
         private const string PlanetTypeCatalogPath = "Assets/ScriptableObjects/Planets/PlanetTypeCatalog.asset";
@@ -135,6 +144,28 @@ namespace Universes.Editor
             Debug.Log($"Planet prefab ready at {PlanetPrefabPath}");
         }
 
+        [MenuItem("Universes/Create Space Station Prefab")]
+        public static void CreateSpaceStationPrefabMenu()
+        {
+            EnsureFolder("Assets/Prefabs");
+            var prefab = LoadOrCreateSpaceStationPrefab();
+            WireSpaceStationBalance(prefab);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Space station prefab ready at {SpaceStationPrefabPath}. Tune orbit and DNA settings on SingleStarBalance.");
+            Selection.activeObject = prefab;
+        }
+
+        [MenuItem("Universes/Create Destroy Rocket Prefab")]
+        public static void CreateDestroyRocketPrefabMenu()
+        {
+            EnsureFolder("Assets/Prefabs");
+            var prefab = LoadOrCreateDestroyRocketPrefab();
+            WireDestroyRocketBalance(prefab);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Destroy rocket prefab ready at {DestroyRocketPrefabPath}.");
+            Selection.activeObject = prefab;
+        }
+
         [MenuItem("Universes/Create Species UI Prefabs")]
         public static void CreateSpeciesUiPrefabsMenu()
         {
@@ -236,8 +267,94 @@ namespace Universes.Editor
             }
 
             BuildStep3Ui(canvas.gameObject, controller, hud);
+            BuildVictoryUi(canvas.gameObject, controller, hud);
             EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
-            Debug.Log("Entropy bar, collapse controls, and run summary panel added.");
+            Debug.Log("Entropy bar, collapse controls, victory panel, and run summary panel added.");
+        }
+
+        [MenuItem("Universes/Create Settings Panel Prefab")]
+        public static void CreateSettingsPanelPrefabMenu()
+        {
+            EnsureFolder("Assets/Prefabs");
+            EnsureFolder("Assets/Prefabs/UI");
+            var prefab = RebuildSettingsPanelPrefab();
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Settings panel prefab ready at {SettingsPanelPrefabPath}. Prefab: {prefab.name}");
+        }
+
+        [MenuItem("Universes/Create Main Menu Scene")]
+        public static void CreateMainMenuSceneMenu()
+        {
+            EnsureFolder("Assets/Scenes");
+            EnsureFolder("Assets/Prefabs");
+            EnsureFolder("Assets/Prefabs/UI");
+            RebuildSettingsPanelPrefab();
+
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            BuildMainMenuScene();
+            EditorSceneManager.SaveScene(scene, MainMenuScenePath);
+            EnsureSceneInBuildSettings(MainMenuScenePath);
+            EnsureSceneInBuildSettings("Assets/Step1.unity");
+            EnsureSceneInBuildSettings(ScenePath);
+            EnsureSceneInBuildSettings(PrestigeScenePath);
+            MoveSceneToTopOfBuildSettings(MainMenuScenePath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Main menu scene saved to {MainMenuScenePath}.");
+        }
+
+        [MenuItem("Universes/Add Pause Settings To Open Scene")]
+        public static void AddPauseSettingsToOpenScene()
+        {
+            var canvas = Object.FindAnyObjectByType<Canvas>();
+            if (canvas == null)
+            {
+                Debug.LogWarning("Need a Canvas in the open scene.");
+                return;
+            }
+
+            EnsureFolder("Assets/Prefabs/UI");
+            var prefab = RebuildSettingsPanelPrefab();
+
+            var existingSettings = canvas.transform.Find("SettingsPanel");
+            if (existingSettings != null)
+                Object.DestroyImmediate(existingSettings.gameObject);
+
+            var settingsGo = (GameObject)PrefabUtility.InstantiatePrefab(prefab, canvas.transform);
+            settingsGo.name = "SettingsPanel";
+
+            var pause = Object.FindAnyObjectByType<GamePauseController>();
+            if (pause == null)
+                pause = canvas.gameObject.AddComponent<GamePauseController>();
+
+            SetRef(pause, "settingsPanel", settingsGo.GetComponent<SettingsPanel>());
+            SetRef(pause, "settingsPanelPrefab", prefab);
+            SetRef(pause, "settingsParent", canvas.transform);
+
+            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            Debug.Log("Settings panel and ESC pause controller added to open scene.");
+        }
+
+        [MenuItem("Universes/Add Victory Panel To Open Scene")]
+        public static void AddVictoryPanelToOpenScene()
+        {
+            var controller = Object.FindAnyObjectByType<GameController>();
+            var canvas = Object.FindAnyObjectByType<Canvas>();
+            if (controller == null || canvas == null)
+            {
+                Debug.LogWarning("Need Game and Canvas in the open scene.");
+                return;
+            }
+
+            var hud = canvas.GetComponent<HUD>();
+            if (hud == null)
+            {
+                Debug.LogWarning("HUD not found on Canvas.");
+                return;
+            }
+
+            BuildVictoryUi(canvas.gameObject, controller, hud);
+            EditorSceneManager.MarkSceneDirty(EditorSceneManager.GetActiveScene());
+            Debug.Log("Victory panel added.");
         }
 
         [MenuItem("Universes/Add Step 2 UI To Open Scene")]
@@ -310,6 +427,15 @@ namespace Universes.Editor
             Debug.Log($"Upgrade prefabs ready at {UpgradeRowPrefabPath} and {UpgradePanelPrefabPath}. Re-run Step 2 UI menu on your scene if the panel was already placed.");
         }
 
+        [MenuItem("Universes/Create Black Hole Prefab")]
+        public static void CreateBlackHolePrefabMenu()
+        {
+            EnsureFolder("Assets/Prefabs");
+            var prefab = LoadOrCreateBlackHolePrefab();
+            AssetDatabase.SaveAssets();
+            Debug.Log($"Black Hole prefab ready at {BlackHolePrefabPath}. Prefab: {prefab.name}");
+        }
+
         [MenuItem("Universes/Create Star Prefab")]
         public static void CreateStarPrefabMenu()
         {
@@ -370,6 +496,8 @@ namespace Universes.Editor
             SetRef(effects, "clickEffectPrefab", LoadOrCreateClickEffectPrefab());
             SetRef(effects, "stardustEmitEffectPrefab", LoadOrCreateStardustEmitEffectPrefab());
             SetRef(effects, "supernovaEffectPrefab", LoadOrCreateSupernovaEffectPrefab());
+            SetRef(controller, "collapseSingularityPrefab", LoadOrCreateCollapseSingularityPrefab());
+            SetRef(controller, "blackHolePrefab", LoadOrCreateBlackHolePrefab());
 
             SetupEventSystem();
             var floater = BuildHud(controller);
@@ -478,6 +606,7 @@ namespace Universes.Editor
             planetBtnLabel.alignment = TextAnchor.MiddleCenter;
 
             var collapsePanel = BuildStep3Ui(canvasGo, controller, hud);
+            BuildVictoryUi(canvasGo, controller, hud);
             BuildStep4Ui(canvasGo, controller, hud, stardust, dna);
 
             SetRef(hud, "controller", controller);
@@ -499,6 +628,8 @@ namespace Universes.Editor
         private static CollapsePanel BuildStep3Ui(GameObject canvasGo, GameController controller,
             HUD hud)
         {
+            SetRef(controller, "collapseSingularityPrefab", LoadOrCreateCollapseSingularityPrefab());
+            SetRef(controller, "blackHolePrefab", LoadOrCreateBlackHolePrefab());
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             var existingEntropy = canvasGo.transform.Find("EntropyPanel");
@@ -671,6 +802,353 @@ namespace Universes.Editor
             }
 
             return collapsePanel;
+        }
+
+        private static VictoryPanel BuildVictoryUi(GameObject canvasGo, GameController controller, HUD hud)
+        {
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            var existingVictory = canvasGo.transform.Find("VictoryPanel");
+            if (existingVictory != null)
+                Object.DestroyImmediate(existingVictory.gameObject);
+
+            var victoryPanelGo = new GameObject("VictoryPanel");
+            victoryPanelGo.transform.SetParent(canvasGo.transform, false);
+            Stretch(victoryPanelGo.AddComponent<RectTransform>());
+            var overlay = victoryPanelGo.AddComponent<Image>();
+            overlay.color = new Color(0.02f, 0.06f, 0.04f, 0.9f);
+
+            var card = new GameObject("Card");
+            card.transform.SetParent(victoryPanelGo.transform, false);
+            var cardRect = card.AddComponent<RectTransform>();
+            cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+            cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+            cardRect.anchoredPosition = new Vector2(180f, 0f);
+            cardRect.sizeDelta = new Vector2(540, 560);
+            card.AddComponent<Image>().color = new Color(0.07f, 0.14f, 0.12f, 0.98f);
+
+            var title = CreateText(card.transform, "Victory", font, 28);
+            var titleRect = title.rectTransform;
+            titleRect.anchorMin = new Vector2(0, 1);
+            titleRect.anchorMax = new Vector2(1, 1);
+            titleRect.pivot = new Vector2(0.5f, 1);
+            titleRect.anchoredPosition = new Vector2(0, -20);
+            titleRect.sizeDelta = new Vector2(-32, 40);
+            title.fontStyle = FontStyle.Bold;
+            title.color = new Color(0.75f, 1f, 0.85f);
+
+            var alienImageGo = new GameObject("AlienImage");
+            alienImageGo.transform.SetParent(card.transform, false);
+            var alienImageRect = alienImageGo.AddComponent<RectTransform>();
+            alienImageRect.anchorMin = new Vector2(0f, 1f);
+            alienImageRect.anchorMax = new Vector2(0f, 1f);
+            alienImageRect.pivot = new Vector2(0f, 1f);
+            alienImageRect.anchoredPosition = new Vector2(24, -70);
+            alienImageRect.sizeDelta = new Vector2(140, 140);
+            var alienFallback = alienImageGo.AddComponent<Image>();
+            alienFallback.color = new Color(0.12f, 0.2f, 0.16f, 0.85f);
+
+            var summary = CreateText(card.transform, "", font, 16);
+            var summaryRect = summary.rectTransform;
+            summaryRect.anchorMin = new Vector2(0, 0.22f);
+            summaryRect.anchorMax = new Vector2(1, 0.88f);
+            summaryRect.offsetMin = new Vector2(180, 0);
+            summaryRect.offsetMax = new Vector2(-24, -50);
+            summary.alignment = TextAnchor.UpperLeft;
+            summary.color = new Color(0.9f, 0.95f, 0.92f);
+
+            var prestigeBtnGo = new GameObject("OpenPrestigeButton");
+            prestigeBtnGo.transform.SetParent(card.transform, false);
+            var prestigeBtnRect = prestigeBtnGo.AddComponent<RectTransform>();
+            prestigeBtnRect.anchorMin = new Vector2(0.5f, 0f);
+            prestigeBtnRect.anchorMax = new Vector2(0.5f, 0f);
+            prestigeBtnRect.anchoredPosition = new Vector2(0, 78);
+            prestigeBtnRect.sizeDelta = new Vector2(280, 36);
+            prestigeBtnGo.AddComponent<Image>().color = new Color(0.16f, 0.32f, 0.24f);
+            var prestigeBtn = prestigeBtnGo.AddComponent<Button>();
+            var prestigeBtnLabel = CreateText(prestigeBtnGo.transform, "Prestige Upgrades", font, 16);
+            Stretch(prestigeBtnLabel.rectTransform);
+            prestigeBtnLabel.alignment = TextAnchor.MiddleCenter;
+
+            var newUniverseBtnGo = new GameObject("StartNewUniverseButton");
+            newUniverseBtnGo.transform.SetParent(card.transform, false);
+            var newBtnRect = newUniverseBtnGo.AddComponent<RectTransform>();
+            newBtnRect.anchorMin = new Vector2(0.5f, 0f);
+            newBtnRect.anchorMax = new Vector2(0.5f, 0f);
+            newBtnRect.anchoredPosition = new Vector2(0, 24);
+            newBtnRect.sizeDelta = new Vector2(280, 44);
+            newUniverseBtnGo.AddComponent<Image>().color = new Color(0.2f, 0.5f, 0.4f);
+            var newUniverseBtn = newUniverseBtnGo.AddComponent<Button>();
+            var newUniverseLabel = CreateText(newUniverseBtnGo.transform, "Start New Universe", font, 18);
+            Stretch(newUniverseLabel.rectTransform);
+            newUniverseLabel.alignment = TextAnchor.MiddleCenter;
+
+            var alienPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AlienImagePrefabPath);
+            var victoryPanel = victoryPanelGo.AddComponent<VictoryPanel>();
+            SetRef(victoryPanel, "controller", controller);
+            SetRef(victoryPanel, "panelRoot", victoryPanelGo);
+            SetRef(victoryPanel, "titleText", title);
+            SetRef(victoryPanel, "summaryText", summary);
+            SetRef(victoryPanel, "alienImageRoot", alienImageGo.transform);
+            SetRef(victoryPanel, "alienImagePrefab", alienPrefab);
+            SetRef(victoryPanel, "prestigeButton", prestigeBtn);
+            SetRef(victoryPanel, "startNewUniverseButton", newUniverseBtn);
+            victoryPanelGo.SetActive(false);
+
+            if (hud != null)
+                SetRef(hud, "victoryPanel", victoryPanel);
+
+            return victoryPanel;
+        }
+
+        private static GameObject RebuildSettingsPanelPrefab()
+        {
+            EnsureFolder("Assets/Prefabs");
+            EnsureFolder("Assets/Prefabs/UI");
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var root = new GameObject("SettingsPanel", typeof(RectTransform));
+            Stretch(root.GetComponent<RectTransform>());
+            root.AddComponent<Image>().color = new Color(0.02f, 0.03f, 0.08f, 0.88f);
+
+            var card = new GameObject("Card", typeof(RectTransform));
+            card.transform.SetParent(root.transform, false);
+            var cardRect = card.GetComponent<RectTransform>();
+            cardRect.anchorMin = new Vector2(0.5f, 0.5f);
+            cardRect.anchorMax = new Vector2(0.5f, 0.5f);
+            cardRect.sizeDelta = new Vector2(440f, 380f);
+            card.AddComponent<Image>().color = new Color(0.08f, 0.1f, 0.16f, 0.98f);
+
+            var title = CreateText(card.transform, "Settings", font, 28);
+            title.fontStyle = FontStyle.Bold;
+            var titleRect = title.rectTransform;
+            titleRect.anchorMin = new Vector2(0f, 1f);
+            titleRect.anchorMax = new Vector2(1f, 1f);
+            titleRect.pivot = new Vector2(0.5f, 1f);
+            titleRect.anchoredPosition = new Vector2(0f, -24f);
+            titleRect.sizeDelta = new Vector2(-32f, 40f);
+
+            var effectsSlider = CreateVolumeSlider(card.transform, "EffectsSlider", "Effects Sound: 100%", font,
+                new Vector2(0f, 70f));
+            var musicSlider = CreateVolumeSlider(card.transform, "MusicSlider", "Music: 100%", font,
+                new Vector2(0f, 0f));
+            var mainMenuBtn = CreateUiButton(card.transform, "MainMenuButton", "Main Menu", font,
+                new Vector2(0f, -70f), new Vector2(300f, 44f), new Color(0.35f, 0.2f, 0.22f));
+            var closeBtn = CreateUiButton(card.transform, "CloseButton", "Resume", font,
+                new Vector2(0f, -130f), new Vector2(300f, 44f), new Color(0.2f, 0.45f, 0.35f));
+
+            var panel = root.AddComponent<SettingsPanel>();
+            SetRef(panel, "panelRoot", root);
+            SetRef(panel, "effectsSlider", effectsSlider);
+            SetRef(panel, "effectsLabelText",
+                effectsSlider.transform.parent.Find("Label")?.GetComponent<Text>());
+            SetRef(panel, "musicSlider", musicSlider);
+            SetRef(panel, "musicLabelText",
+                musicSlider.transform.parent.Find("Label")?.GetComponent<Text>());
+            SetRef(panel, "mainMenuButton", mainMenuBtn);
+            SetRef(panel, "closeButton", closeBtn);
+            SetRef(panel, "closeButtonText", closeBtn.GetComponentInChildren<Text>());
+            SetString(panel, "mainMenuSceneName", MainMenuSceneName);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(root, SettingsPanelPrefabPath);
+            Object.DestroyImmediate(root);
+            return prefab;
+        }
+
+        private static Slider CreateVolumeSlider(Transform parent, string name, string label, Font font,
+            Vector2 anchoredPosition)
+        {
+            var root = new GameObject(name, typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+            var rootRect = root.GetComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0.5f, 0.5f);
+            rootRect.anchorMax = new Vector2(0.5f, 0.5f);
+            rootRect.pivot = new Vector2(0.5f, 0.5f);
+            rootRect.anchoredPosition = anchoredPosition;
+            rootRect.sizeDelta = new Vector2(320f, 56f);
+
+            var labelText = CreateText(root.transform, label, font, 16);
+            labelText.gameObject.name = "Label";
+            var labelRect = labelText.rectTransform;
+            labelRect.anchorMin = new Vector2(0f, 1f);
+            labelRect.anchorMax = new Vector2(1f, 1f);
+            labelRect.pivot = new Vector2(0.5f, 1f);
+            labelRect.anchoredPosition = new Vector2(0f, 0f);
+            labelRect.sizeDelta = new Vector2(0f, 22f);
+            labelText.alignment = TextAnchor.MiddleLeft;
+
+            var sliderGo = new GameObject("Slider", typeof(RectTransform));
+            sliderGo.transform.SetParent(root.transform, false);
+            var sliderRect = sliderGo.GetComponent<RectTransform>();
+            sliderRect.anchorMin = new Vector2(0f, 0f);
+            sliderRect.anchorMax = new Vector2(1f, 0f);
+            sliderRect.pivot = new Vector2(0.5f, 0f);
+            sliderRect.anchoredPosition = new Vector2(0f, 4f);
+            sliderRect.sizeDelta = new Vector2(0f, 22f);
+
+            var bg = new GameObject("Background", typeof(RectTransform));
+            bg.transform.SetParent(sliderGo.transform, false);
+            Stretch(bg.GetComponent<RectTransform>());
+            bg.AddComponent<Image>().color = new Color(0.12f, 0.14f, 0.2f, 0.95f);
+
+            var fillArea = new GameObject("Fill Area", typeof(RectTransform));
+            fillArea.transform.SetParent(sliderGo.transform, false);
+            var fillAreaRect = fillArea.GetComponent<RectTransform>();
+            Stretch(fillAreaRect);
+            fillAreaRect.offsetMin = new Vector2(6f, 4f);
+            fillAreaRect.offsetMax = new Vector2(-6f, -4f);
+
+            var fill = new GameObject("Fill", typeof(RectTransform));
+            fill.transform.SetParent(fillArea.transform, false);
+            var fillRect = fill.GetComponent<RectTransform>();
+            fillRect.anchorMin = Vector2.zero;
+            fillRect.anchorMax = Vector2.one;
+            fillRect.offsetMin = Vector2.zero;
+            fillRect.offsetMax = Vector2.zero;
+            var fillImage = fill.AddComponent<Image>();
+            fillImage.color = new Color(0.3f, 0.7f, 0.95f);
+
+            var handleArea = new GameObject("Handle Slide Area", typeof(RectTransform));
+            handleArea.transform.SetParent(sliderGo.transform, false);
+            var handleAreaRect = handleArea.GetComponent<RectTransform>();
+            Stretch(handleAreaRect);
+            handleAreaRect.offsetMin = new Vector2(8f, 0f);
+            handleAreaRect.offsetMax = new Vector2(-8f, 0f);
+
+            var handle = new GameObject("Handle", typeof(RectTransform));
+            handle.transform.SetParent(handleArea.transform, false);
+            var handleRect = handle.GetComponent<RectTransform>();
+            handleRect.sizeDelta = new Vector2(18f, 18f);
+            var handleImage = handle.AddComponent<Image>();
+            handleImage.color = new Color(0.9f, 0.95f, 1f);
+
+            var slider = sliderGo.AddComponent<Slider>();
+            slider.fillRect = fillRect;
+            slider.handleRect = handleRect;
+            slider.targetGraphic = handleImage;
+            slider.direction = Slider.Direction.LeftToRight;
+            slider.minValue = 0f;
+            slider.maxValue = 1f;
+            slider.value = 1f;
+            return slider;
+        }
+
+        private static void BuildMainMenuScene()
+        {
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+
+            var cameraGo = new GameObject("Main Camera");
+            var camera = cameraGo.AddComponent<Camera>();
+            camera.tag = "MainCamera";
+            camera.clearFlags = CameraClearFlags.SolidColor;
+            camera.backgroundColor = new Color(0.015f, 0.02f, 0.05f);
+            camera.orthographic = true;
+            camera.orthographicSize = 5f;
+            cameraGo.transform.position = new Vector3(0f, 0f, -10f);
+            cameraGo.AddComponent<AudioListener>();
+
+            var eventSystemGo = new GameObject("EventSystem");
+            eventSystemGo.AddComponent<EventSystem>();
+            eventSystemGo.AddComponent<StandaloneInputModule>();
+
+            var canvasGo = new GameObject("Canvas");
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = canvasGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920, 1080);
+            canvasGo.AddComponent<GraphicRaycaster>();
+
+            var title = CreateText(canvasGo.transform, "Cosmic Selection", font, 56);
+            title.gameObject.name = "GameNameText";
+            title.fontStyle = FontStyle.Bold;
+            title.color = new Color(0.78f, 0.92f, 1f);
+            var titleRect = title.rectTransform;
+            titleRect.anchorMin = new Vector2(0.5f, 0.5f);
+            titleRect.anchorMax = new Vector2(0.5f, 0.5f);
+            titleRect.pivot = new Vector2(0.5f, 0.5f);
+            titleRect.anchoredPosition = new Vector2(0f, 180f);
+            titleRect.sizeDelta = new Vector2(900f, 80f);
+
+            var subtitle = CreateText(canvasGo.transform, "Parallel Universes", font, 22);
+            subtitle.color = new Color(0.55f, 0.75f, 0.9f);
+            var subtitleRect = subtitle.rectTransform;
+            subtitleRect.anchorMin = new Vector2(0.5f, 0.5f);
+            subtitleRect.anchorMax = new Vector2(0.5f, 0.5f);
+            subtitleRect.anchoredPosition = new Vector2(0f, 120f);
+            subtitleRect.sizeDelta = new Vector2(500f, 36f);
+
+            var newGameBtn = CreateUiButton(canvasGo.transform, "NewGameButton", "New Game", font,
+                new Vector2(0f, 40f), new Vector2(280f, 52f), new Color(0.2f, 0.45f, 0.55f));
+            var continueBtn = CreateUiButton(canvasGo.transform, "ContinueButton", "Continue", font,
+                new Vector2(0f, -30f), new Vector2(280f, 52f), new Color(0.18f, 0.35f, 0.48f));
+            var settingsBtn = CreateUiButton(canvasGo.transform, "SettingsButton", "Settings", font,
+                new Vector2(0f, -100f), new Vector2(280f, 52f), new Color(0.22f, 0.3f, 0.4f));
+            var exitBtn = CreateUiButton(canvasGo.transform, "ExitButton", "Exit", font,
+                new Vector2(0f, -170f), new Vector2(280f, 52f), new Color(0.35f, 0.2f, 0.22f));
+
+            var settingsPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SettingsPanelPrefabPath);
+            SettingsPanel settingsPanel = null;
+            if (settingsPrefab != null)
+            {
+                var settingsGo = (GameObject)PrefabUtility.InstantiatePrefab(settingsPrefab, canvasGo.transform);
+                settingsGo.name = "SettingsPanel";
+                settingsPanel = settingsGo.GetComponent<SettingsPanel>();
+            }
+
+            var menu = canvasGo.AddComponent<MainMenuController>();
+            SetRef(menu, "gameNameText", title);
+            SetString(menu, "gameName", "Cosmic Selection");
+            SetRef(menu, "newGameButton", newGameBtn);
+            SetRef(menu, "continueButton", continueBtn);
+            SetRef(menu, "settingsButton", settingsBtn);
+            SetRef(menu, "exitButton", exitBtn);
+            SetRef(menu, "settingsPanel", settingsPanel);
+            SetRef(menu, "settingsPanelPrefab", settingsPrefab);
+            SetRef(menu, "settingsParent", canvasGo.transform);
+            SetString(menu, "gameSceneName", "Step1");
+        }
+
+        private static Button CreateUiButton(Transform parent, string name, string label, Font font,
+            Vector2 anchoredPosition, Vector2 size, Color color)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            var rect = go.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = size;
+            go.AddComponent<Image>().color = color;
+            var button = go.AddComponent<Button>();
+            var text = CreateText(go.transform, label, font, 20);
+            Stretch(text.rectTransform);
+            text.alignment = TextAnchor.MiddleCenter;
+            return button;
+        }
+
+        private static void MoveSceneToTopOfBuildSettings(string scenePath)
+        {
+            var scenes = EditorBuildSettings.scenes;
+            var index = -1;
+            for (var i = 0; i < scenes.Length; i++)
+            {
+                if (scenes[i].path == scenePath)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index <= 0)
+                return;
+
+            var selected = scenes[index];
+            for (var i = index; i > 0; i--)
+                scenes[i] = scenes[i - 1];
+            scenes[0] = selected;
+            EditorBuildSettings.scenes = scenes;
         }
 
         private static void BuildStep4Ui(GameObject canvasGo, GameController controller,
@@ -1127,6 +1605,35 @@ namespace Universes.Editor
             rect.anchorMax = new Vector2(1f, 0.5f);
             rect.pivot = new Vector2(1f, 0.5f);
             rect.anchoredPosition = new Vector2(-12f, 0f);
+            rect.sizeDelta = new Vector2(300f, 220f);
+            var image = tooltipGo.AddComponent<Image>();
+            image.color = new Color(0.04f, 0.055f, 0.08f, 0.96f);
+            image.raycastTarget = false;
+
+            tooltipText = CreateText(tooltipGo.transform, "", font, 14);
+            tooltipText.name = "TooltipText";
+            tooltipText.alignment = TextAnchor.UpperLeft;
+            tooltipText.color = new Color(0.85f, 0.92f, 1f);
+            tooltipText.raycastTarget = false;
+            var textRect = tooltipText.rectTransform;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(12f, 10f);
+            textRect.offsetMax = new Vector2(-12f, -10f);
+
+            tooltipGo.SetActive(false);
+            return tooltipGo;
+        }
+
+        private static GameObject BuildUpgradeTooltip(Transform parent, Font font, out Text tooltipText)
+        {
+            var tooltipGo = new GameObject("UpgradeTooltip", typeof(RectTransform));
+            tooltipGo.transform.SetParent(parent, false);
+            var rect = tooltipGo.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0.5f);
+            rect.anchorMax = new Vector2(0f, 0.5f);
+            rect.pivot = new Vector2(1f, 0.5f);
+            rect.anchoredPosition = new Vector2(12f, 0f);
             rect.sizeDelta = new Vector2(300f, 220f);
             var image = tooltipGo.AddComponent<Image>();
             image.color = new Color(0.04f, 0.055f, 0.08f, 0.96f);
@@ -1607,7 +2114,16 @@ namespace Universes.Editor
                 LoadUpgradeDefinition("collision_dna_production"),
                 LoadUpgradeDefinition("entropy_reduction"),
                 LoadUpgradeDefinition("species_dna_production"),
-                LoadUpgradeDefinition("star_planet_click_value")
+                LoadUpgradeDefinition("star_planet_click_value"),
+                LoadUpgradeDefinition("collision_attraction"),
+                LoadUpgradeDefinition("black_hole_stabilization"),
+                LoadUpgradeDefinition("black_hole_memory"),
+                LoadUpgradeDefinition("space_age_dna"),
+                LoadUpgradeDefinition("space_age_progression"),
+                LoadUpgradeDefinition("cosmic_event_dna"),
+                LoadUpgradeDefinition("orbital_dna"),
+                LoadUpgradeDefinition("auto_star_formation"),
+                LoadUpgradeDefinition("entropy_equalization")
             };
 
             var rowInstances = new System.Collections.Generic.List<UpgradeRow>();
@@ -1627,7 +2143,10 @@ namespace Universes.Editor
             }
 
             var panelComp = panelGo.AddComponent<UpgradePanel>();
+            var tooltip = BuildUpgradeTooltip(panelGo.transform, font, out var tooltipTextComp);
             var panelSo = new SerializedObject(panelComp);
+            panelSo.FindProperty("tooltipRoot").objectReferenceValue = tooltip;
+            panelSo.FindProperty("tooltipText").objectReferenceValue = tooltipTextComp;
             var rowsProp = panelSo.FindProperty("upgradeRows");
             rowsProp.arraySize = rowInstances.Count;
             for (var i = 0; i < rowInstances.Count; i++)
@@ -1641,6 +2160,11 @@ namespace Universes.Editor
 
         private static UpgradeDefinition LoadUpgradeDefinition(string assetName)
         {
+            var upgradesPath = $"Assets/ScriptableObjects/Upgrades/{assetName}.asset";
+            var fromUpgrades = AssetDatabase.LoadAssetAtPath<UpgradeDefinition>(upgradesPath);
+            if (fromUpgrades != null)
+                return fromUpgrades;
+
             return AssetDatabase.LoadAssetAtPath<UpgradeDefinition>(
                 $"{UpgradeFolder}/{assetName}.asset");
         }
@@ -1668,48 +2192,40 @@ namespace Universes.Editor
             UpgradeDefinition definition)
         {
             var title = definition != null ? definition.displayName : "Upgrade";
-            var description = definition != null ? definition.description : string.Empty;
 
             var row = new GameObject(objectName, typeof(RectTransform));
-            var layout = row.AddComponent<VerticalLayoutGroup>();
-            layout.spacing = 4;
-            layout.childForceExpandHeight = false;
-            layout.padding = new RectOffset(6, 6, 6, 6);
             var rowLayout = row.AddComponent<LayoutElement>();
-            rowLayout.minHeight = 88;
+            rowLayout.minHeight = 44;
 
             var bg = row.AddComponent<Image>();
             bg.color = new Color(0.1f, 0.12f, 0.18f, 0.9f);
+            bg.raycastTarget = true;
 
-            var headerGo = new GameObject("Header", typeof(RectTransform));
-            headerGo.transform.SetParent(row.transform, false);
-            headerGo.AddComponent<LayoutElement>().minHeight = 32;
-            var headerLayout = headerGo.AddComponent<HorizontalLayoutGroup>();
-            headerLayout.spacing = 6;
+            var headerLayout = row.AddComponent<HorizontalLayoutGroup>();
+            headerLayout.spacing = 8;
+            headerLayout.padding = new RectOffset(8, 8, 6, 6);
             headerLayout.childAlignment = TextAnchor.MiddleLeft;
             headerLayout.childControlWidth = false;
             headerLayout.childControlHeight = false;
             headerLayout.childForceExpandWidth = false;
             headerLayout.childForceExpandHeight = false;
 
-            var iconImage = CreateUpgradeIcon(headerGo.transform, "Icon", new Vector2(28f, 28f));
-            iconImage.gameObject.AddComponent<LayoutElement>().preferredWidth = 28f;
+            var iconImage = CreateUpgradeIcon(row.transform, "Icon", new Vector2(24f, 24f));
+            iconImage.gameObject.AddComponent<LayoutElement>().preferredWidth = 24f;
 
-            var titleText = CreateText(headerGo.transform, $"{title} (Lv 0)", font, 14);
+            var titleText = CreateText(row.transform, $"{title} (Lv 0)", font, 14);
             titleText.fontStyle = FontStyle.Bold;
-            titleText.alignment = TextAnchor.UpperLeft;
+            titleText.alignment = TextAnchor.MiddleLeft;
             var titleLayout = titleText.gameObject.AddComponent<LayoutElement>();
-            titleLayout.minHeight = 20;
-            titleLayout.preferredWidth = 230f;
-
-            var descText = CreateText(row.transform, description, font, 11);
-            descText.color = new Color(0.75f, 0.8f, 0.9f);
-            descText.alignment = TextAnchor.UpperLeft;
-            descText.gameObject.AddComponent<LayoutElement>().minHeight = 32;
+            titleLayout.flexibleWidth = 1f;
+            titleLayout.preferredWidth = 130f;
 
             var btnGo = new GameObject("BuyButton", typeof(RectTransform));
             btnGo.transform.SetParent(row.transform, false);
-            btnGo.AddComponent<LayoutElement>().minHeight = 30;
+            var btnLayout = btnGo.AddComponent<LayoutElement>();
+            btnLayout.minWidth = 88f;
+            btnLayout.preferredWidth = 92f;
+            btnLayout.minHeight = 30f;
             var btnImg = btnGo.AddComponent<Image>();
             btnImg.color = new Color(0.18f, 0.32f, 0.5f);
             var btn = btnGo.AddComponent<Button>();
@@ -1722,7 +2238,6 @@ namespace Universes.Editor
             var so = new SerializedObject(rowComp);
             so.FindProperty("definition").objectReferenceValue = definition;
             so.FindProperty("titleText").objectReferenceValue = titleText;
-            so.FindProperty("descriptionText").objectReferenceValue = descText;
             so.FindProperty("iconImage").objectReferenceValue = iconImage;
             so.FindProperty("buyButton").objectReferenceValue = btn;
             so.FindProperty("costText").objectReferenceValue = costText;
@@ -1855,6 +2370,164 @@ namespace Universes.Editor
 
         private static ParticleSystem LoadOrCreateSupernovaEffectPrefab() =>
             LoadOrCreateVfxPrefab(SupernovaEffectPrefabPath, "SupernovaEffect", burstCount: 36, startSize: 0.22f, startSpeed: 2.4f, lifetime: 0.7f, radius: 0.45f);
+
+        private static BlackHoleView LoadOrCreateBlackHolePrefab()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<BlackHoleView>(BlackHolePrefabPath);
+            if (existing != null)
+                return existing;
+
+            EnsureFolder("Assets/Prefabs");
+            var go = new GameObject("BlackHole");
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = CreateCircleSprite();
+            renderer.color = new Color(0.12f, 0.04f, 0.22f, 0.95f);
+            renderer.sortingOrder = 15;
+            go.transform.localScale = Vector3.one * 0.55f;
+
+            var view = go.AddComponent<BlackHoleView>();
+            SetRef(view, "coreRenderer", renderer);
+            SetFloat(view, "spinSpeed", 90f);
+            SetFloat(view, "baseScale", 0.55f);
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, BlackHolePrefabPath);
+            Object.DestroyImmediate(go);
+            return prefab.GetComponent<BlackHoleView>();
+        }
+
+        private static UniverseCollapseSingularity LoadOrCreateCollapseSingularityPrefab()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<UniverseCollapseSingularity>(CollapseSingularityPrefabPath);
+            if (existing != null)
+                return existing;
+
+            var go = new GameObject("CollapseSingularity");
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sprite = CreateCollapseDiscSprite();
+            renderer.color = new Color(0.12f, 0.04f, 0.22f, 0.98f);
+            renderer.sortingOrder = 30;
+            var singularity = go.AddComponent<UniverseCollapseSingularity>();
+            var so = new SerializedObject(singularity);
+            so.FindProperty("coreRenderer").objectReferenceValue = renderer;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, CollapseSingularityPrefabPath);
+            Object.DestroyImmediate(go);
+            return prefab.GetComponent<UniverseCollapseSingularity>();
+        }
+
+        private static GameObject LoadOrCreateSpaceStationPrefab()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(SpaceStationPrefabPath);
+            if (existing != null)
+                return existing;
+
+            var shipPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(SpaceShipPrefabPath);
+            if (shipPrefab == null)
+                throw new FileNotFoundException($"Missing spaceship prefab at {SpaceShipPrefabPath}.");
+
+            var instance = PrefabUtility.InstantiatePrefab(shipPrefab) as GameObject;
+            instance.name = "SpaceStation";
+            var oldShip = instance.GetComponent<SpaceshipView>();
+            if (oldShip != null)
+                Object.DestroyImmediate(oldShip);
+
+            var station = instance.AddComponent<SpaceStationView>();
+            var renderer = instance.GetComponent<SpriteRenderer>();
+            if (renderer != null)
+            {
+                renderer.sortingOrder = 11;
+                renderer.color = Color.white;
+            }
+
+            instance.transform.localScale = new Vector3(0.35f, 0.35f, 1f);
+            instance.transform.localRotation = Quaternion.identity;
+
+            var so = new SerializedObject(station);
+            so.FindProperty("stationRenderer").objectReferenceValue = renderer;
+            var portraitRoot = instance.transform.Find("Canvas");
+            so.FindProperty("portraitRoot").objectReferenceValue = portraitRoot;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(instance, SpaceStationPrefabPath);
+            Object.DestroyImmediate(instance);
+            return prefab;
+        }
+
+        private static void WireSpaceStationBalance(GameObject spaceStationPrefab)
+        {
+            var balance = LoadOrCreateSingleStarBalance();
+            var so = new SerializedObject(balance);
+            var civ = so.FindProperty("civilization");
+            if (civ == null)
+                return;
+
+            civ.FindPropertyRelative("spaceStationPrefab").objectReferenceValue = spaceStationPrefab;
+
+            var stationSprites = AssetDatabase.LoadAllAssetsAtPath("Assets/Art/SpaceShips.png");
+            var spritesProp = civ.FindPropertyRelative("spaceStationSprites");
+            spritesProp.arraySize = 0;
+            foreach (var asset in stationSprites)
+            {
+                if (asset is not Sprite sprite)
+                    continue;
+
+                spritesProp.arraySize++;
+                spritesProp.GetArrayElementAtIndex(spritesProp.arraySize - 1).objectReferenceValue = sprite;
+            }
+
+            so.ApplyModifiedPropertiesWithoutUndo();
+            EditorUtility.SetDirty(balance);
+        }
+
+        private static GameObject LoadOrCreateDestroyRocketPrefab()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<GameObject>(DestroyRocketPrefabPath);
+            if (existing != null)
+                return existing;
+
+            var go = new GameObject("DestroyRocket");
+            var renderer = go.AddComponent<SpriteRenderer>();
+            renderer.sortingOrder = 13;
+            renderer.color = Color.white;
+            go.transform.localScale = new Vector3(0.28f, 0.28f, 1f);
+
+            var rocket = go.AddComponent<DestroyRocketView>();
+            var so = new SerializedObject(rocket);
+            so.FindProperty("rocketRenderer").objectReferenceValue = renderer;
+            so.ApplyModifiedPropertiesWithoutUndo();
+
+            var prefab = PrefabUtility.SaveAsPrefabAsset(go, DestroyRocketPrefabPath);
+            Object.DestroyImmediate(go);
+            return prefab;
+        }
+
+        private static void WireDestroyRocketBalance(GameObject destroyRocketPrefab)
+        {
+            // Scene-placed DestroyRocketPool is used at runtime; prefab is only an authoring helper.
+            Selection.activeObject = destroyRocketPrefab;
+        }
+
+        private static Sprite CreateCollapseDiscSprite()
+        {
+            const int size = 64;
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            var center = (size - 1) * 0.5f;
+
+            for (var y = 0; y < size; y++)
+            {
+                for (var x = 0; x < size; x++)
+                {
+                    var dist = Vector2.Distance(new Vector2(x, y), new Vector2(center, center)) / (size * 0.5f);
+                    var ring = Mathf.Clamp01(1f - Mathf.Abs(dist - 0.62f) * 7f);
+                    var core = dist < 0.32f ? 1f : 0f;
+                    var alpha = Mathf.Max(ring * 0.9f, core);
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+
+            tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+        }
 
         private static ParticleSystem LoadOrCreateVfxPrefab(string path, string objectName, int burstCount,
             float startSize, float startSpeed, float lifetime, float radius)
@@ -2029,6 +2702,17 @@ namespace Universes.Editor
             }
         }
 
+        private static void SetFloat(Object target, string field, float value)
+        {
+            var so = new SerializedObject(target);
+            var prop = so.FindProperty(field);
+            if (prop != null)
+            {
+                prop.floatValue = value;
+                so.ApplyModifiedPropertiesWithoutUndo();
+            }
+        }
+
         private static void SetString(Object target, string field, string value)
         {
             var so = new SerializedObject(target);
@@ -2081,7 +2765,7 @@ namespace Universes.Editor
             CreateUpgradeDefinition(UpgradeType.ClickPowerPercent, "click_power_percent",
                 "Click Power Percent", "Multiplies Stardust gained from star clicks by a percentage per level.");
             CreateUpgradeDefinition(UpgradeType.PassiveProduction, "passive_production",
-                "Passive Production", "More Stardust per second. Higher levels add bigger flat bonuses.");
+                "Passive Production", "More Stardust per second from stars. Higher levels add bigger flat bonuses, like Click Power.");
             CreateUpgradeDefinition(UpgradeType.StarStability, "star_stability",
                 "Star Stability", "Star ages slower from clicks and passive");
             CreateUpgradeDefinition(UpgradeType.SupernovaBonus, "supernova_bonus",
@@ -2101,9 +2785,10 @@ namespace Universes.Editor
             CreateUpgradeDefinition(UpgradeType.AdvancedStarStability, "advanced_star_stability",
                 "Advanced Star Stability", "Further slows star aging after basic stability is developed.");
             CreateUpgradeDefinition(UpgradeType.PlanetPassiveProduction, "planet_passive_production",
-                "Planet Passive Production", "Planets orbiting stars produce passive Stardust each tick.");
+                "Planet Passive Production Percent",
+                "Multiplies Stardust gained from planet passive production by a percentage per level.");
             CreateUpgradeDefinition(UpgradeType.StarPassiveProductionPercent, "star_passive_production_percent",
-                "Star Passive Production Percentage", "Increases each star's passive Stardust production by a percentage.");
+                "Passive Production Percent", "Multiplies Stardust gained from star passive production by a percentage per level.");
             CreateUpgradeDefinition(UpgradeType.CollisionDnaProduction, "collision_dna_production",
                 "Collision DNA Production", "Increases DNA Potential gained when celestial objects collide.");
             CreateUpgradeDefinition(UpgradeType.EntropyReduction, "entropy_reduction",
@@ -2113,6 +2798,110 @@ namespace Universes.Editor
             CreateUpgradeDefinition(UpgradeType.StarPlanetClickValue, "star_planet_click_value",
                 "Planet-Powered Clicks", "Stars gain click Stardust from each planet orbiting them.");
             CreateExpandUniverseDefinition();
+            CreateExpandCosmicDefinition();
+            CreatePhase3UpgradeDefinitions();
+        }
+
+        private static void CreatePhase3UpgradeDefinitions()
+        {
+            CreatePhase3Upgrade(UpgradeType.CollisionAttraction, "collision_attraction",
+                "Collision Attraction",
+                "Stars drift faster toward each other, increasing the chance of stellar collisions.",
+                baseCost: 900, maxLevel: 10);
+            CreatePhase3Upgrade(UpgradeType.BlackHoleStabilization, "black_hole_stabilization",
+                "Black Hole Stabilization",
+                "Reduces the Entropy generated by active Black Holes.",
+                baseCost: 1200, maxLevel: 10);
+            CreatePhase3Upgrade(UpgradeType.BlackHoleMemory, "black_hole_memory",
+                "Black Hole Memory",
+                "Black Holes generate more DNA Potential over time.",
+                baseCost: 1100, maxLevel: 10);
+            CreatePhase3Upgrade(UpgradeType.SpaceAgeDna, "space_age_dna",
+                "Space Age DNA",
+                "Species in the Space phase generate more DNA Potential.",
+                baseCost: 1400, maxLevel: 10);
+            CreatePhase3Upgrade(UpgradeType.SpaceAgeProgression, "space_age_progression",
+                "Space Age Progression",
+                "Species in the Space phase progress toward Hard Space faster.",
+                baseCost: 1500, maxLevel: 10);
+            CreatePhase3Upgrade(UpgradeType.CosmicEventDna, "cosmic_event_dna",
+                "Cosmic Event DNA",
+                "Supernovas, star collisions, black holes, and other cosmic events are more likely to drop DNA.",
+                baseCost: 1300, maxLevel: 10);
+            CreatePhase3Upgrade(UpgradeType.OrbitalDna, "orbital_dna",
+                "Orbital DNA",
+                "Spaceships and space stations generate more DNA Potential.",
+                baseCost: 1200, maxLevel: 10);
+            CreatePhase3Upgrade(UpgradeType.AutoStarFormation, "auto_star_formation",
+                "Auto Star Formation",
+                "Chance to automatically form a free star over time, like Auto Planet Formation.",
+                baseCost: 1000, maxLevel: 10);
+            CreatePhase3Upgrade(UpgradeType.EntropyEqualization, "entropy_equalization",
+                "Entropy Equalization",
+                "Stabilize the universe's Entropy and achieve equilibrium. Activating this ends the run in victory.",
+                baseCost: 15000, maxLevel: 1,
+                extraPrerequisites: new[]
+                {
+                    new UpgradeLevelRequirement { upgradeType = UpgradeType.EntropyReduction, requiredLevel = 3 },
+                    new UpgradeLevelRequirement { upgradeType = UpgradeType.BlackHoleStabilization, requiredLevel = 3 }
+                });
+        }
+
+        private static void CreatePhase3Upgrade(UpgradeType type, string assetName, string displayName,
+            string description, double baseCost, int maxLevel,
+            UpgradeLevelRequirement[] extraPrerequisites = null)
+        {
+            EnsureFolder("Assets/ScriptableObjects/Upgrades");
+            var path = $"Assets/ScriptableObjects/Upgrades/{assetName}.asset";
+            var existing = AssetDatabase.LoadAssetAtPath<UpgradeDefinition>(path);
+            if (existing != null)
+                return;
+
+            var def = ScriptableObject.CreateInstance<UpgradeDefinition>();
+            def.upgradeType = type;
+            def.upgradeTier = 3;
+            def.displayName = displayName;
+            def.description = description;
+            def.baseCost = baseCost;
+            def.costScale = type == UpgradeType.EntropyEqualization ? 1f : 1.75;
+            def.maxLevel = maxLevel;
+
+            var prerequisites = new System.Collections.Generic.List<UpgradeLevelRequirement>
+            {
+                new() { upgradeType = UpgradeType.ExpandCosmic, requiredLevel = 1 }
+            };
+            if (extraPrerequisites != null)
+                prerequisites.AddRange(extraPrerequisites);
+            def.upgradePrerequisites = prerequisites.ToArray();
+
+            AssetDatabase.CreateAsset(def, path);
+        }
+
+        private static void CreateExpandCosmicDefinition()
+        {
+            var path = $"{UpgradeFolder}/expand_cosmic.asset";
+            var existing = AssetDatabase.LoadAssetAtPath<UpgradeDefinition>(path);
+            if (existing != null)
+                return;
+
+            var def = ScriptableObject.CreateInstance<UpgradeDefinition>();
+            def.upgradeType = UpgradeType.ExpandCosmic;
+            def.upgradeTier = GetDefaultUpgradeTier(UpgradeType.ExpandCosmic);
+            def.displayName = "Expand Cosmos";
+            def.description =
+                "Unlock Step 3: Full Cosmic Age with black holes, star collisions, particle vacuum, and universe collapse.";
+            def.baseCost = 2500;
+            def.costScale = 1f;
+            def.maxLevel = 1;
+            def.upgradePrerequisites = new[]
+            {
+                new UpgradeLevelRequirement
+                {
+                    upgradeType = UpgradeType.ExpandUniverse,
+                    requiredLevel = 1
+                }
+            };
+            AssetDatabase.CreateAsset(def, path);
         }
 
         private static void CreateExpandUniverseDefinition()
@@ -2158,7 +2947,7 @@ namespace Universes.Editor
         {
             UpgradeType.ClickPower => 25,
             UpgradeType.ClickPowerPercent => 15,
-            UpgradeType.PassiveProduction => 20,
+            UpgradeType.PassiveProduction => 25,
             UpgradeType.StarStability => 10,
             UpgradeType.SupernovaBonus => 10,
             UpgradeType.ClickCollectRadius => 5,
@@ -2167,7 +2956,7 @@ namespace Universes.Editor
             UpgradeType.PlanetDnaChance => 10,
             UpgradeType.PlanetClickValue => 20,
             UpgradeType.HabitablePlanetChance => 10,
-            UpgradeType.MaxStarCount => 4,
+            UpgradeType.MaxStarCount => 9,
             UpgradeType.AdvancedStarStability => 10,
             UpgradeType.PlanetPassiveProduction => 15,
             UpgradeType.StarPlanetClickValue => 15,
@@ -2175,23 +2964,42 @@ namespace Universes.Editor
             UpgradeType.CollisionDnaProduction => 15,
             UpgradeType.EntropyReduction => 10,
             UpgradeType.SpeciesDnaProduction => 15,
+            UpgradeType.CollisionAttraction => 10,
+            UpgradeType.BlackHoleStabilization => 10,
+            UpgradeType.BlackHoleMemory => 10,
+            UpgradeType.SpaceAgeDna => 10,
+            UpgradeType.SpaceAgeProgression => 10,
+            UpgradeType.CosmicEventDna => 10,
+            UpgradeType.OrbitalDna => 10,
+            UpgradeType.AutoStarFormation => 10,
+            UpgradeType.EntropyEqualization => 1,
             UpgradeType.ExpandUniverse => 1,
+            UpgradeType.ExpandCosmic => 1,
             _ => 0
         };
 
         private static int GetDefaultUpgradeTier(UpgradeType type) => type switch
         {
-            UpgradeType.ClickPowerPercent => 2,
+            UpgradeType.ClickPowerPercent => 1,
+            UpgradeType.StarPassiveProductionPercent => 1,
             UpgradeType.SupernovaBonus => 2,
             UpgradeType.ClickCollectRadius => 2,
             UpgradeType.MaxStarCount => 2,
             UpgradeType.AdvancedStarStability => 2,
             UpgradeType.PlanetPassiveProduction => 2,
             UpgradeType.StarPlanetClickValue => 2,
-            UpgradeType.StarPassiveProductionPercent => 2,
             UpgradeType.CollisionDnaProduction => 2,
             UpgradeType.EntropyReduction => 2,
             UpgradeType.SpeciesDnaProduction => 2,
+            UpgradeType.CollisionAttraction => 3,
+            UpgradeType.BlackHoleStabilization => 3,
+            UpgradeType.BlackHoleMemory => 3,
+            UpgradeType.SpaceAgeDna => 3,
+            UpgradeType.SpaceAgeProgression => 3,
+            UpgradeType.CosmicEventDna => 3,
+            UpgradeType.OrbitalDna => 3,
+            UpgradeType.AutoStarFormation => 3,
+            UpgradeType.EntropyEqualization => 3,
             _ => 1
         };
 
@@ -2270,7 +3078,17 @@ namespace Universes.Editor
                 LoadUpgradeDefinition("entropy_reduction"),
                 LoadUpgradeDefinition("species_dna_production"),
                 LoadUpgradeDefinition("star_planet_click_value"),
-                LoadUpgradeDefinition("expand_universe")
+                LoadUpgradeDefinition("collision_attraction"),
+                LoadUpgradeDefinition("black_hole_stabilization"),
+                LoadUpgradeDefinition("black_hole_memory"),
+                LoadUpgradeDefinition("space_age_dna"),
+                LoadUpgradeDefinition("space_age_progression"),
+                LoadUpgradeDefinition("cosmic_event_dna"),
+                LoadUpgradeDefinition("orbital_dna"),
+                LoadUpgradeDefinition("auto_star_formation"),
+                LoadUpgradeDefinition("entropy_equalization"),
+                LoadUpgradeDefinition("expand_universe"),
+                LoadUpgradeDefinition("expand_cosmic")
             };
 
             var rowInstances = new System.Collections.Generic.List<UpgradeRow>();
@@ -2289,7 +3107,10 @@ namespace Universes.Editor
             }
 
             var panelComp = panelGo.AddComponent<UpgradePanel>();
+            var tooltip = BuildUpgradeTooltip(panelGo.transform, font, out var tooltipTextComp);
             var panelSo = new SerializedObject(panelComp);
+            panelSo.FindProperty("tooltipRoot").objectReferenceValue = tooltip;
+            panelSo.FindProperty("tooltipText").objectReferenceValue = tooltipTextComp;
             var rowsProp = panelSo.FindProperty("upgradeRows");
             rowsProp.arraySize = rowInstances.Count;
             for (var i = 0; i < rowInstances.Count; i++)

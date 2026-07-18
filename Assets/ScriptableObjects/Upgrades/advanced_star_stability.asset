@@ -15,8 +15,9 @@ MonoBehaviour:
   upgradeType: 12
   upgradeTier: 2
   displayName: Advanced Star Stability
+  iconSprite: {fileID: 0}
   description: Further slows star aging after basic stability is developed.
-  baseCost: 140
+  baseCost: 300
   costScale: 1.8
   maxLevel: 10
   upgradePrerequisites:

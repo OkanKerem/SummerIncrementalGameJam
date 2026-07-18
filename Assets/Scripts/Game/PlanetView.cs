@@ -21,8 +21,10 @@ namespace Universes.Game
         private Vector3 _baseScale;
         private Coroutine _popRoutine;
         private static Material _orbitLineMaterial;
+        private bool _blackHolePullActive;
 
         public Planet Planet => _planet;
+        public bool IsBlackHolePullActive => _blackHolePullActive;
 
         public void Bind(Planet planet, PlanetManager manager, Transform orbitCenter)
         {
@@ -44,9 +46,43 @@ namespace Universes.Game
             if (_planet == null || _orbitCenter == null || !_planet.IsAlive)
                 return;
 
+            if (_blackHolePullActive)
+                return;
+
             _planet.OrbitAngle += _manager.GetOrbitSpeed() * deltaTime;
             UpdatePosition();
             RefreshOrbitLine();
+        }
+
+        public float PullToward(Vector3 target, float pullRadius, float pullSpeed, float deltaTime)
+        {
+            if (_planet == null || !_planet.IsAlive)
+                return float.MaxValue;
+
+            var position = transform.position;
+            var distance = Vector3.Distance(position, target);
+            if (pullRadius <= 0f || pullSpeed <= 0f || deltaTime <= 0f || distance > pullRadius)
+            {
+                if (_blackHolePullActive)
+                {
+                    _blackHolePullActive = false;
+                    UpdatePosition();
+                    RefreshOrbitLine();
+                }
+
+                return distance;
+            }
+
+            _blackHolePullActive = true;
+            if (distance > 0.001f)
+            {
+                var proximity = 1f - Mathf.Clamp01(distance / pullRadius);
+                var speed = pullSpeed * (0.35f + proximity * 1.65f);
+                transform.position = Vector3.MoveTowards(position, target, speed * deltaTime);
+                RefreshOrbitLine();
+            }
+
+            return Vector3.Distance(transform.position, target);
         }
 
         private void ApplyDefinitionVisuals()
@@ -109,6 +145,107 @@ namespace Universes.Game
                 _orbitLine.enabled = _planet.IsAlive && (_manager == null || _manager.ShowOrbitLines);
 
             RefreshNameLabel();
+            RefreshSpeciesPortrait();
+        }
+
+        private GameObject _speciesPortraitRoot;
+        private Canvas _speciesPortraitCanvas;
+
+        private void RefreshSpeciesPortrait()
+        {
+            if (_planet == null)
+                return;
+
+            var show = _planet.HasSpecies;
+            var canvas = ResolveSpeciesPortraitCanvas();
+            if (canvas != null)
+                canvas.gameObject.SetActive(show);
+
+            if (!show)
+                return;
+
+            var portrait = ResolveSpeciesPortraitRoot();
+            if (portrait == null)
+                return;
+
+            portrait.SetActive(true);
+            var faces = portrait.transform.Find("Faces");
+            var eyes = portrait.transform.Find("Eyes");
+            if (faces != null)
+                faces.gameObject.SetActive(true);
+            if (eyes != null)
+                eyes.gameObject.SetActive(true);
+
+            SpeciesPortraitPool.ConfigurePortrait(portrait, _planet);
+        }
+
+        private Canvas ResolveSpeciesPortraitCanvas()
+        {
+            if (_speciesPortraitCanvas != null)
+                return _speciesPortraitCanvas;
+
+            _speciesPortraitCanvas = GetComponentInChildren<Canvas>(true);
+            return _speciesPortraitCanvas;
+        }
+
+        private GameObject ResolveSpeciesPortraitRoot()
+        {
+            if (_speciesPortraitRoot != null)
+                return _speciesPortraitRoot;
+
+            var canvas = ResolveSpeciesPortraitCanvas();
+            if (canvas != null)
+            {
+                var foundInCanvas = FindPortraitByParts(canvas.transform);
+                if (foundInCanvas != null)
+                {
+                    _speciesPortraitRoot = foundInCanvas.gameObject;
+                    return _speciesPortraitRoot;
+                }
+            }
+
+            var namedAlien = transform.Find("Alien");
+            if (namedAlien == null)
+            {
+                foreach (Transform child in transform)
+                {
+                    if (child.name.StartsWith("Alien"))
+                    {
+                        namedAlien = child;
+                        break;
+                    }
+                }
+            }
+
+            if (namedAlien != null)
+            {
+                _speciesPortraitRoot = namedAlien.gameObject;
+                return _speciesPortraitRoot;
+            }
+
+            var found = FindPortraitByParts(transform);
+            if (found != null)
+                _speciesPortraitRoot = found.gameObject;
+
+            return _speciesPortraitRoot;
+        }
+
+        private static Transform FindPortraitByParts(Transform root)
+        {
+            if (root == null)
+                return null;
+
+            if (root.Find("Faces") != null && root.Find("Eyes") != null)
+                return root;
+
+            foreach (Transform child in root)
+            {
+                var found = FindPortraitByParts(child);
+                if (found != null)
+                    return found;
+            }
+
+            return null;
         }
 
         private void UpdatePosition()
@@ -127,12 +264,17 @@ namespace Universes.Game
             RefreshNameLabel();
         }
 
+        public void HideOrbitLine()
+        {
+            if (_orbitLine != null)
+                _orbitLine.enabled = false;
+        }
+
         private void RefreshOrbitLine()
         {
             if (_planet == null || _orbitCenter == null || _manager == null || !_manager.ShowOrbitLines)
             {
-                if (_orbitLine != null)
-                    _orbitLine.enabled = false;
+                HideOrbitLine();
                 return;
             }
 

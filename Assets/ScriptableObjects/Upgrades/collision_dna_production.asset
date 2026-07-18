@@ -15,8 +15,9 @@ MonoBehaviour:
   upgradeType: 17
   upgradeTier: 2
   displayName: Collision DNA Production
+  iconSprite: {fileID: 0}
   description: Increases the amount of DNA received when celestial objects collide.
-  baseCost: 160
+  baseCost: 2500
   costScale: 1.7
   maxLevel: 15
   upgradePrerequisites: []

@@ -18,8 +18,10 @@ namespace Universes.Game
         public string SpeciesName { get; private set; }
         public string SpeciesDescription { get; private set; }
         public string CivilizationName { get; private set; }
+        public string SpaceProgramName { get; private set; }
         public int Intelligence { get; private set; }
         public int Aggression { get; private set; }
+        public float HardSpaceCompletionProgress { get; private set; }
 
         public bool IsAlive => Durability > 0f;
         public bool HasLife => CivilizationStage > CivilizationStage.NoLife;
@@ -55,6 +57,7 @@ namespace Universes.Game
         }
 
         public bool TryAddCivilizationProgress(float amount, CivilizationBalanceConfig balance,
+            System.Func<CivilizationStage, bool> canEnterStage,
             out CivilizationStage advancedTo)
         {
             advancedTo = CivilizationStage;
@@ -68,9 +71,13 @@ namespace Universes.Game
                    CivilizationProgress >=
                    CivilizationUtility.GetProgressRequirement(CivilizationStage, balance))
             {
+                var nextStage = CivilizationUtility.Next(CivilizationStage);
+                if (canEnterStage != null && !canEnterStage(nextStage))
+                    break;
+
                 CivilizationProgress -=
                     CivilizationUtility.GetProgressRequirement(CivilizationStage, balance);
-                CivilizationStage = CivilizationUtility.Next(CivilizationStage);
+                CivilizationStage = nextStage;
             }
 
             if (CivilizationStage == before)
@@ -87,6 +94,8 @@ namespace Universes.Game
 
             CivilizationStage = stage;
             CivilizationProgress = 0f;
+            if (stage < CivilizationStage.HardSpace)
+                HardSpaceCompletionProgress = 0f;
         }
 
         public void AssignLifeIdentity(string planetName, string speciesName, string speciesDescription,
@@ -98,6 +107,40 @@ namespace Universes.Game
             CivilizationName = civilizationName;
             Intelligence = intelligence;
             Aggression = aggression;
+        }
+
+        public void InheritSpeciesFrom(Planet source)
+        {
+            if (source == null || !source.HasSpecies)
+                return;
+
+            AssignLifeIdentity(
+                SpeciesNaming.GeneratePlanetName(Id),
+                source.SpeciesName,
+                source.SpeciesDescription,
+                source.CivilizationName,
+                source.Intelligence,
+                source.Aggression);
+        }
+
+        public void AssignSpaceProgramName(string spaceProgramName)
+        {
+            if (!string.IsNullOrWhiteSpace(SpaceProgramName))
+                return;
+
+            SpaceProgramName = spaceProgramName;
+        }
+
+        public bool AddHardSpaceCompletionProgress(float amount, float requirement)
+        {
+            if (!IsAlive || CivilizationStage != CivilizationStage.HardSpace || amount <= 0f)
+                return false;
+
+            var safeRequirement = UnityEngine.Mathf.Max(0.01f, requirement);
+            HardSpaceCompletionProgress = UnityEngine.Mathf.Min(
+                safeRequirement,
+                HardSpaceCompletionProgress + amount);
+            return HardSpaceCompletionProgress >= safeRequirement;
         }
     }
 }

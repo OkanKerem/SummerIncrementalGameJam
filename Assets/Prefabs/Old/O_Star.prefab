@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 3230151509811589506}
   - component: {fileID: 2906000020982830532}
   m_Layer: 0
-  m_Name: Star
+  m_Name: O_Star
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -79,7 +79,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 5
-  m_Sprite: {fileID: -2413806693520163455, guid: 55fa1d73279cb7248ac2e26202ca71fe, type: 3}
+  m_Sprite: {fileID: -7065894990419298243, guid: 3dadff9f714349744ad4bbf7ec148630, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0

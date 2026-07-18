@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace Universes.Game
 {
     public enum UpgradeType
@@ -21,7 +23,17 @@ namespace Universes.Game
         StarPassiveProductionPercent,
         CollisionDnaProduction,
         EntropyReduction,
-        SpeciesDnaProduction
+        SpeciesDnaProduction,
+        ExpandCosmic,
+        CollisionAttraction,
+        BlackHoleStabilization,
+        BlackHoleMemory,
+        SpaceAgeDna,
+        SpaceAgeProgression,
+        CosmicEventDna,
+        EntropyEqualization,
+        OrbitalDna,
+        AutoStarFormation
     }
 
     public class Upgrades
@@ -38,6 +50,7 @@ namespace Universes.Game
         public int PlanetClickValueLevel { get; private set; }
         public int HabitablePlanetChanceLevel { get; private set; }
         public int UniverseExpandedLevel { get; private set; }
+        public int CosmicExpandedLevel { get; private set; }
         public int MaxStarCountLevel { get; private set; }
         public int AdvancedStarStabilityLevel { get; private set; }
         public int PlanetPassiveProductionLevel { get; private set; }
@@ -46,8 +59,19 @@ namespace Universes.Game
         public int CollisionDnaProductionLevel { get; private set; }
         public int EntropyReductionLevel { get; private set; }
         public int SpeciesDnaProductionLevel { get; private set; }
+        public int CollisionAttractionLevel { get; private set; }
+        public int BlackHoleStabilizationLevel { get; private set; }
+        public int BlackHoleMemoryLevel { get; private set; }
+        public int SpaceAgeDnaLevel { get; private set; }
+        public int SpaceAgeProgressionLevel { get; private set; }
+        public int CosmicEventDnaLevel { get; private set; }
+        public int EntropyEqualizationLevel { get; private set; }
+        public int OrbitalDnaLevel { get; private set; }
+        public int AutoStarFormationLevel { get; private set; }
 
         public bool IsUniverseExpanded => UniverseExpandedLevel > 0;
+        public bool IsCosmicExpanded => CosmicExpandedLevel > 0;
+        public bool IsEntropyEqualized => EntropyEqualizationLevel > 0;
 
         public int GetLevel(UpgradeDefinition definition) =>
             definition != null ? GetLevel(definition.upgradeType) : 0;
@@ -67,6 +91,7 @@ namespace Universes.Game
                 UpgradeType.PlanetClickValue => PlanetClickValueLevel,
                 UpgradeType.HabitablePlanetChance => HabitablePlanetChanceLevel,
                 UpgradeType.ExpandUniverse => UniverseExpandedLevel,
+                UpgradeType.ExpandCosmic => CosmicExpandedLevel,
                 UpgradeType.MaxStarCount => MaxStarCountLevel,
                 UpgradeType.AdvancedStarStability => AdvancedStarStabilityLevel,
                 UpgradeType.PlanetPassiveProduction => PlanetPassiveProductionLevel,
@@ -75,6 +100,15 @@ namespace Universes.Game
                 UpgradeType.CollisionDnaProduction => CollisionDnaProductionLevel,
                 UpgradeType.EntropyReduction => EntropyReductionLevel,
                 UpgradeType.SpeciesDnaProduction => SpeciesDnaProductionLevel,
+                UpgradeType.CollisionAttraction => CollisionAttractionLevel,
+                UpgradeType.BlackHoleStabilization => BlackHoleStabilizationLevel,
+                UpgradeType.BlackHoleMemory => BlackHoleMemoryLevel,
+                UpgradeType.SpaceAgeDna => SpaceAgeDnaLevel,
+                UpgradeType.SpaceAgeProgression => SpaceAgeProgressionLevel,
+                UpgradeType.CosmicEventDna => CosmicEventDnaLevel,
+                UpgradeType.EntropyEqualization => EntropyEqualizationLevel,
+                UpgradeType.OrbitalDna => OrbitalDnaLevel,
+                UpgradeType.AutoStarFormation => AutoStarFormationLevel,
                 _ => 0
             };
 
@@ -121,6 +155,7 @@ namespace Universes.Game
                 case UpgradeType.PlanetClickValue: PlanetClickValueLevel++; break;
                 case UpgradeType.HabitablePlanetChance: HabitablePlanetChanceLevel++; break;
                 case UpgradeType.ExpandUniverse: UniverseExpandedLevel++; break;
+                case UpgradeType.ExpandCosmic: CosmicExpandedLevel++; break;
                 case UpgradeType.MaxStarCount: MaxStarCountLevel++; break;
                 case UpgradeType.AdvancedStarStability: AdvancedStarStabilityLevel++; break;
                 case UpgradeType.PlanetPassiveProduction: PlanetPassiveProductionLevel++; break;
@@ -129,6 +164,15 @@ namespace Universes.Game
                 case UpgradeType.CollisionDnaProduction: CollisionDnaProductionLevel++; break;
                 case UpgradeType.EntropyReduction: EntropyReductionLevel++; break;
                 case UpgradeType.SpeciesDnaProduction: SpeciesDnaProductionLevel++; break;
+                case UpgradeType.CollisionAttraction: CollisionAttractionLevel++; break;
+                case UpgradeType.BlackHoleStabilization: BlackHoleStabilizationLevel++; break;
+                case UpgradeType.BlackHoleMemory: BlackHoleMemoryLevel++; break;
+                case UpgradeType.SpaceAgeDna: SpaceAgeDnaLevel++; break;
+                case UpgradeType.SpaceAgeProgression: SpaceAgeProgressionLevel++; break;
+                case UpgradeType.CosmicEventDna: CosmicEventDnaLevel++; break;
+                case UpgradeType.EntropyEqualization: EntropyEqualizationLevel++; break;
+                case UpgradeType.OrbitalDna: OrbitalDnaLevel++; break;
+                case UpgradeType.AutoStarFormation: AutoStarFormationLevel++; break;
             }
 
             return true;
@@ -167,6 +211,7 @@ namespace Universes.Game
             PlanetClickValueLevel = 0;
             HabitablePlanetChanceLevel = 0;
             UniverseExpandedLevel = 0;
+            CosmicExpandedLevel = 0;
             MaxStarCountLevel = 0;
             AdvancedStarStabilityLevel = 0;
             PlanetPassiveProductionLevel = 0;
@@ -175,6 +220,55 @@ namespace Universes.Game
             CollisionDnaProductionLevel = 0;
             EntropyReductionLevel = 0;
             SpeciesDnaProductionLevel = 0;
+            CollisionAttractionLevel = 0;
+            BlackHoleStabilizationLevel = 0;
+            BlackHoleMemoryLevel = 0;
+            SpaceAgeDnaLevel = 0;
+            SpaceAgeProgressionLevel = 0;
+            CosmicEventDnaLevel = 0;
+            EntropyEqualizationLevel = 0;
+            OrbitalDnaLevel = 0;
+            AutoStarFormationLevel = 0;
+        }
+
+        public void LoadFromSave(RunSaveData data)
+        {
+            if (data == null)
+            {
+                Reset();
+                return;
+            }
+
+            ClickPowerLevel = Mathf.Max(0, data.clickPowerLevel);
+            ClickPowerPercentLevel = Mathf.Max(0, data.clickPowerPercentLevel);
+            PassiveProductionLevel = Mathf.Max(0, data.passiveProductionLevel);
+            StarStabilityLevel = Mathf.Max(0, data.starStabilityLevel);
+            SupernovaBonusLevel = Mathf.Max(0, data.supernovaBonusLevel);
+            ClickCollectRadiusLevel = Mathf.Max(0, data.clickCollectRadiusLevel);
+            MaxPlanetCountLevel = Mathf.Max(0, data.maxPlanetCountLevel);
+            AutoPlanetFormationLevel = Mathf.Max(0, data.autoPlanetFormationLevel);
+            PlanetDnaChanceLevel = Mathf.Max(0, data.planetDnaChanceLevel);
+            PlanetClickValueLevel = Mathf.Max(0, data.planetClickValueLevel);
+            HabitablePlanetChanceLevel = Mathf.Max(0, data.habitablePlanetChanceLevel);
+            UniverseExpandedLevel = Mathf.Max(0, data.universeExpandedLevel);
+            CosmicExpandedLevel = Mathf.Max(0, data.cosmicExpandedLevel);
+            MaxStarCountLevel = Mathf.Max(0, data.maxStarCountLevel);
+            AdvancedStarStabilityLevel = Mathf.Max(0, data.advancedStarStabilityLevel);
+            PlanetPassiveProductionLevel = Mathf.Max(0, data.planetPassiveProductionLevel);
+            StarPlanetClickValueLevel = Mathf.Max(0, data.starPlanetClickValueLevel);
+            StarPassiveProductionPercentLevel = Mathf.Max(0, data.starPassiveProductionPercentLevel);
+            CollisionDnaProductionLevel = Mathf.Max(0, data.collisionDnaProductionLevel);
+            EntropyReductionLevel = Mathf.Max(0, data.entropyReductionLevel);
+            SpeciesDnaProductionLevel = Mathf.Max(0, data.speciesDnaProductionLevel);
+            CollisionAttractionLevel = Mathf.Max(0, data.collisionAttractionLevel);
+            BlackHoleStabilizationLevel = Mathf.Max(0, data.blackHoleStabilizationLevel);
+            BlackHoleMemoryLevel = Mathf.Max(0, data.blackHoleMemoryLevel);
+            SpaceAgeDnaLevel = Mathf.Max(0, data.spaceAgeDnaLevel);
+            SpaceAgeProgressionLevel = Mathf.Max(0, data.spaceAgeProgressionLevel);
+            CosmicEventDnaLevel = Mathf.Max(0, data.cosmicEventDnaLevel);
+            EntropyEqualizationLevel = Mathf.Max(0, data.entropyEqualizationLevel);
+            OrbitalDnaLevel = Mathf.Max(0, data.orbitalDnaLevel);
+            AutoStarFormationLevel = Mathf.Max(0, data.autoStarFormationLevel);
         }
 
         public void SetUniverseExpanded(bool expanded) =>

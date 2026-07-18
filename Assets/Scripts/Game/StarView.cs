@@ -44,7 +44,7 @@ namespace Universes.Game
         private void Awake()
         {
             CachePrefabTransforms();
-            _driftVelocity = Random.insideUnitCircle.normalized * CosmicBalance.StarDriftSpeed;
+            _driftVelocity = Random.insideUnitCircle.normalized;
         }
 
         private void CachePrefabTransforms()
@@ -156,6 +156,22 @@ namespace Universes.Game
             }
 
             transform.position = pos;
+        }
+
+        public float PullToward(Vector3 target, float pullRadius, float pullSpeed, float deltaTime)
+        {
+            if (!IsInteractable || pullRadius <= 0f || pullSpeed <= 0f || deltaTime <= 0f)
+                return Vector3.Distance(transform.position, target);
+
+            var position = transform.position;
+            var distance = Vector3.Distance(position, target);
+            if (distance > pullRadius || distance <= 0.001f)
+                return distance;
+
+            var proximity = 1f - Mathf.Clamp01(distance / pullRadius);
+            var speed = pullSpeed * (0.35f + proximity * 1.65f);
+            transform.position = Vector3.MoveTowards(position, target, speed * deltaTime);
+            return Vector3.Distance(transform.position, target);
         }
 
         public bool BeginSupernova()
@@ -365,7 +381,25 @@ namespace Universes.Game
             if (_controller == null || !IsInteractable || _controller.IsCollapsed)
                 return;
 
+            if (!Input.GetMouseButtonDown(0))
+                return;
+
             _controller.OnStarClicked(this);
+        }
+
+        public static StarView GetStarUnderMouse()
+        {
+            var camera = Camera.main;
+            if (camera == null)
+                return null;
+
+            var worldPoint = camera.ScreenToWorldPoint(Input.mousePosition);
+            worldPoint.z = 0f;
+            var hit = Physics2D.OverlapPoint(worldPoint);
+            if (hit == null)
+                return null;
+
+            return hit.GetComponentInParent<StarView>();
         }
 
         private static float EaseOutCubic(float t) => 1f - Mathf.Pow(1f - t, 3f);

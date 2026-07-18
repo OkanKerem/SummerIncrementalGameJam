@@ -15,6 +15,7 @@ MonoBehaviour:
   upgradeType: 13
   upgradeTier: 1
   displayName: Click Power Percent
+  iconSprite: {fileID: 0}
   description: Multiplies Stardust gained from star clicks by a percentage per level.
   baseCost: 60
   costScale: 1.75

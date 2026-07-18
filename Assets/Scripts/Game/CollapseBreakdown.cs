@@ -6,20 +6,20 @@ namespace Universes.Game
     {
         public int BaseReward;
         public int FromDnaFragments;
-        public int FromBlackHolePotential;
+        public int FromDnaPotential;
         public int FromSupernovas;
         public int FromCollisions;
         public int FromProduction;
         public int FromLifetime;
         public int TotalGained;
 
-        public static CollapseBreakdown Calculate(RunStats stats)
+        public static CollapseBreakdown Calculate(RunStats stats, double dnaPotential)
         {
             var breakdown = new CollapseBreakdown
             {
                 BaseReward = PrestigeBalance.BaseCollapseDnaReward,
                 FromDnaFragments = stats.DnaFragmentsCollected,
-                FromBlackHolePotential = Mathf.FloorToInt(stats.BlackHoleDnaPotential),
+                FromDnaPotential = Mathf.FloorToInt((float)dnaPotential),
                 FromSupernovas = stats.SupernovaCount / PrestigeBalance.SupernovasPerDnaPoint,
                 FromCollisions = stats.StarCollisionCount / PrestigeBalance.CollisionsPerDnaPoint,
                 FromProduction = (int)(stats.TotalStardustProduced / PrestigeBalance.StardustPerDnaPoint),
@@ -29,7 +29,7 @@ namespace Universes.Game
 
             breakdown.TotalGained = breakdown.BaseReward
                                       + breakdown.FromDnaFragments
-                                      + breakdown.FromBlackHolePotential
+                                      + breakdown.FromDnaPotential
                                       + breakdown.FromSupernovas
                                       + breakdown.FromCollisions
                                       + breakdown.FromProduction

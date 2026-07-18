@@ -11,6 +11,7 @@ namespace Universes.Game
         public int HighestPlanetCount { get; private set; }
         public int LifePlanetsReached { get; private set; }
         public string HighestCivilizationLabel { get; private set; } = "No Life";
+        public string HighestCivilizationSpeciesName { get; private set; } = string.Empty;
         public int SupernovaCount { get; private set; }
         public int StarCollisionCount { get; private set; }
         public int BlackHolesCreated { get; private set; }
@@ -30,6 +31,7 @@ namespace Universes.Game
             HighestPlanetCount = 0;
             LifePlanetsReached = 0;
             HighestCivilizationLabel = "No Life";
+            HighestCivilizationSpeciesName = string.Empty;
             SupernovaCount = 0;
             StarCollisionCount = 0;
             BlackHolesCreated = 0;
@@ -59,9 +61,11 @@ namespace Universes.Game
         public void RecordPlanetDestroyed() => PlanetsDestroyed++;
         public void RecordLifePlanet() => LifePlanetsReached++;
 
-        public void RecordHighestCivilization(CivilizationStage stage)
+        public void RecordHighestCivilization(CivilizationStage stage, string speciesName = null)
         {
             HighestCivilizationLabel = CivilizationUtility.GetLabel(stage);
+            if (!string.IsNullOrWhiteSpace(speciesName))
+                HighestCivilizationSpeciesName = speciesName;
         }
 
         public void RecordSupernova() => SupernovaCount++;

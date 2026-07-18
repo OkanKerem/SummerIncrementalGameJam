@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 12
   displayName: Civilization Acceleration
-  iconSprite: {fileID: 0}
+  iconSprite: {fileID: 8720490015424529263, guid: b7fea82973b652c44b3e318c9db846b8, type: 3}
   description: Civilizations progress through their stages faster.
   maxLevel: 0
   prerequisites:

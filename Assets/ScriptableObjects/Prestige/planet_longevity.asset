@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 8
   displayName: Planet Longevity
-  iconSprite: {fileID: 0}
+  iconSprite: {fileID: -5691456020082119196, guid: e3dedcbb1984c964d873c3201f83a720, type: 3}
   description: Increases the durability and lifetime of newly formed planets.
   maxLevel: 0
   prerequisites:

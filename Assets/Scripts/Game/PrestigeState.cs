@@ -78,5 +78,13 @@ namespace Universes.Game
             for (var i = 0; i < count; i++)
                 _levels[i] = Math.Max(0, upgradeLevels[i]);
         }
+
+        public void Reset()
+        {
+            UniverseDna = 0;
+            TotalCollapses = 0;
+            Array.Clear(_levels, 0, _levels.Length);
+            OnChanged?.Invoke();
+        }
     }
 }

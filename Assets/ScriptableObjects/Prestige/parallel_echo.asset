@@ -14,11 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 7
   displayName: Parallel Echo
-  iconSprite: {fileID: 7343146336752564177, guid: 60f6cb5cd9f8c2f47a1b20de9b46e8b0, type: 3}
+  iconSprite: {fileID: -3820215144114945063, guid: bf94a98e5ed8a994c9b08052125e642f, type: 3}
   description: Past collapsed universes echo passive Stardust into the new universe.
   maxLevel: 0
   prerequisites:
   - upgradeType: 4
-    requiredLevel: 1
-  - upgradeType: 2
     requiredLevel: 1

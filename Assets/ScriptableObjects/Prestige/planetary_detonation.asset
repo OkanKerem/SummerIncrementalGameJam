@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 10
   displayName: Planetary Detonation
-  iconSprite: {fileID: 0}
+  iconSprite: {fileID: -985091967368595688, guid: 2761b58aa04f29c448be8b158246d13c, type: 3}
   description: Destroyed planets release additional Stardust.
   maxLevel: 0
   prerequisites:

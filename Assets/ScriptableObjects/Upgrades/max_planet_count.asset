@@ -15,8 +15,9 @@ MonoBehaviour:
   upgradeType: 5
   upgradeTier: 1
   displayName: Max Planet Count
+  iconSprite: {fileID: 0}
   description: +1 max planet orbit slot per level
-  baseCost: 20
+  baseCost: 50
   costScale: 1.5
   maxLevel: 5
   upgradePrerequisites: []

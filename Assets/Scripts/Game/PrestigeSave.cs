@@ -45,5 +45,11 @@ namespace Universes.Game
 
             prestige.LoadFromSave(data.universeDna, data.totalCollapses, data.upgradeLevels);
         }
+
+        public static void Clear()
+        {
+            PlayerPrefs.DeleteKey(SaveKey);
+            PlayerPrefs.Save();
+        }
     }
 }

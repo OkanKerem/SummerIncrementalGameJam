@@ -40,12 +40,43 @@ namespace Universes.Game
             musicSource.playOnAwake = false;
             musicSource.loop = true;
             musicSource.volume = musicVolume;
+
+            GameAudioSettings.Changed += ApplyAudioSettings;
+            ApplyAudioSettings();
+        }
+
+        private void OnDestroy()
+        {
+            GameAudioSettings.Changed -= ApplyAudioSettings;
         }
 
         private void Start()
         {
-            if (playMusicOnStart)
+            if (playMusicOnStart && GameAudioSettings.MusicEnabled)
                 PlayMainMusic();
+        }
+
+        public void ApplyAudioSettings()
+        {
+            if (musicSource == null)
+                return;
+
+            var volume = musicVolume * GameAudioSettings.MusicVolume;
+            musicSource.volume = volume;
+
+            if (volume <= 0.001f)
+            {
+                if (musicSource.isPlaying)
+                    musicSource.Pause();
+                return;
+            }
+
+            if (playMusicOnStart && musicSource.clip != null && !musicSource.isPlaying)
+            {
+                musicSource.UnPause();
+                if (!musicSource.isPlaying)
+                    PlayMainMusic();
+            }
         }
 
         public void PlayStarClick() => PlayRandom(starClickClips);
@@ -57,11 +88,11 @@ namespace Universes.Game
 
         public void PlayMainMusic()
         {
-            if (musicSource == null || mainMusicClip == null)
+            if (musicSource == null || mainMusicClip == null || !GameAudioSettings.MusicEnabled)
                 return;
 
             musicSource.clip = mainMusicClip;
-            musicSource.volume = musicVolume;
+            musicSource.volume = musicVolume * GameAudioSettings.MusicVolume;
             musicSource.loop = true;
 
             if (!musicSource.isPlaying)
@@ -76,7 +107,11 @@ namespace Universes.Game
 
         private void PlayRandom(AudioClip[] clips)
         {
-            if (audioSource == null || clips == null || clips.Length == 0 || masterVolume <= 0f)
+            var effectsVolume = masterVolume * GameAudioSettings.EffectsVolume;
+            if (effectsVolume <= 0.001f)
+                return;
+
+            if (audioSource == null || clips == null || clips.Length == 0)
                 return;
 
             var clip = clips[Random.Range(0, clips.Length)];
@@ -85,7 +120,7 @@ namespace Universes.Game
 
             var originalPitch = audioSource.pitch;
             audioSource.pitch = Random.Range(Mathf.Min(minPitch, maxPitch), Mathf.Max(minPitch, maxPitch));
-            audioSource.PlayOneShot(clip, masterVolume);
+            audioSource.PlayOneShot(clip, effectsVolume);
             audioSource.pitch = originalPitch;
         }
     }

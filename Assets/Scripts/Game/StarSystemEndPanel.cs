@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace Universes.Game
@@ -10,6 +11,9 @@ namespace Universes.Game
         [SerializeField] private Text titleText;
         [SerializeField] private Text summaryText;
         [SerializeField] private Button newSystemButton;
+        [SerializeField] private Button prestigeButton;
+        [SerializeField] private string prestigeSceneName = "PrestigeScene";
+        private const string ReturnSceneKey = "PrototypePrestigeReturnScene";
 
         private void Awake()
         {
@@ -24,6 +28,8 @@ namespace Universes.Game
                 controller?.StartNewStarSystem();
                 Hide();
             });
+
+            prestigeButton?.onClick.AddListener(LoadPrestigeScene);
 
             if (controller != null)
                 controller.OnStarSystemEnded += Show;
@@ -51,6 +57,16 @@ namespace Universes.Game
         {
             if (panelRoot != null)
                 panelRoot.SetActive(false);
+        }
+
+        private void LoadPrestigeScene()
+        {
+            if (string.IsNullOrWhiteSpace(prestigeSceneName))
+                return;
+
+            PlayerPrefs.SetString(ReturnSceneKey, SceneManager.GetActiveScene().name);
+            PlayerPrefs.Save();
+            SceneManager.LoadScene(prestigeSceneName);
         }
 
         private static string BuildSummary(GameController controller)

@@ -15,10 +15,11 @@ MonoBehaviour:
   upgradeType: 3
   upgradeTier: 2
   displayName: Supernova Bonus
+  iconSprite: {fileID: 0}
   description: +15 Supernova reward per level
-  baseCost: 40
+  baseCost: 4000
   costScale: 1.55
-  maxLevel: 10
+  maxLevel: 5
   upgradePrerequisites: []
   statPrerequisites:
   - statType: 4

@@ -149,7 +149,9 @@ namespace Universes.Game
             _particles.RemoveAll(p => p == null);
             controller?.CreditStardust(value);
 
-            if (value >= 100 && Random.value < CosmicBalance.MassiveParticleDnaChance)
+            if (controller != null && value >= 100 &&
+                Random.value < controller.Phase3Balance.massiveParticleDnaChance +
+                controller.GetCosmicEventDnaChanceBonus())
                 controller?.TrySpawnDnaFragment(position);
         }
 
@@ -190,7 +192,10 @@ namespace Universes.Game
                         continue;
 
                     var dist = Vector3.Distance(particle.Position, hole.transform.position);
-                    if (dist <= CosmicBalance.BlackHoleParticlePullRadius && dist < closestDist)
+                    var pullRadius = controller != null
+                        ? controller.Phase3Balance.blackHoleParticlePullRadius
+                        : 0f;
+                    if (dist <= pullRadius && dist < closestDist)
                     {
                         closestDist = dist;
                         closest = hole.transform;
@@ -201,6 +206,19 @@ namespace Universes.Game
                     particle.SetBlackHolePull(closest);
                 else
                     particle.ClearBlackHolePull();
+            }
+        }
+
+        public void PullAllToward(Transform target)
+        {
+            if (target == null)
+                return;
+
+            _particles.RemoveAll(p => p == null);
+            foreach (var particle in _particles)
+            {
+                if (particle != null)
+                    particle.SetBlackHolePull(target);
             }
         }
 

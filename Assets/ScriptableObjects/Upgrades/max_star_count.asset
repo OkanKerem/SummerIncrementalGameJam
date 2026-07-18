@@ -15,10 +15,11 @@ MonoBehaviour:
   upgradeType: 11
   upgradeTier: 2
   displayName: Max Star Count
-  description: Unlocks one additional active star slot per level, up to five stars.
-  baseCost: 180
+  iconSprite: {fileID: 0}
+  description: Unlocks one additional active star slot per level, up to ten stars.
+  baseCost: 1000
   costScale: 2
-  maxLevel: 4
+  maxLevel: 9
   upgradePrerequisites:
   - upgradeType: 0
     requiredLevel: 5

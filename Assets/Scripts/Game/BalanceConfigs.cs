@@ -353,7 +353,7 @@ namespace Universes.Game
             new()
             {
                 stage = CivilizationStage.PrimitiveLife,
-                stageName = "Primitive Life",
+                stageName = "Primitive",
                 progressRequirement = 1f,
                 stageDnaValue = 0.35f,
                 stageClickBonusMultiplier = 1.05f,
@@ -362,7 +362,7 @@ namespace Universes.Game
             new()
             {
                 stage = CivilizationStage.CivilizationPhase,
-                stageName = "Civilization Phase",
+                stageName = "Civilization",
                 progressRequirement = 1.25f,
                 stageDnaValue = 0.9f,
                 stageClickBonusMultiplier = 1.12f,
@@ -371,7 +371,7 @@ namespace Universes.Game
             new()
             {
                 stage = CivilizationStage.SpacePhase,
-                stageName = "Space Phase",
+                stageName = "Space",
                 progressRequirement = 1.5f,
                 stageDnaValue = 2f,
                 stageClickBonusMultiplier = 1.15f,
@@ -397,6 +397,42 @@ namespace Universes.Game
         [Min(0.1f)] public float spaceshipSpeed = 2.5f;
         [Min(0f)] public float spaceshipDnaPotentialPerTrip = 1f;
         [Min(1)] public int maxActiveSpaceships = 3;
+
+        [Header("Space Stations")]
+        public CivilizationStage spaceStationMinimumStage = CivilizationStage.HardSpace;
+        public GameObject spaceStationPrefab;
+        public Sprite[] spaceStationSprites = Array.Empty<Sprite>();
+        [Min(0.1f)] public float spaceStationSpawnInterval = 6f;
+        [Min(1)] public int maxActiveSpaceStations = 2;
+        [Min(0.1f)] public float spaceStationTravelSpeed = 2.5f;
+        [Min(0.05f)] public float spaceStationOrbitRadius = 0.2f;
+        [Min(0.1f)] public float spaceStationOrbitRadiusPlanetMultiplier = 2f;
+        [Min(1f)] public float spaceStationOrbitSpeed = 28f;
+        [Min(0.1f)] public float spaceStationDnaInterval = 3f;
+        [Min(0f)] public float spaceStationDnaPotentialPerTick = 0.75f;
+
+        [Header("Colonization")]
+        public bool colonizationEnabled = true;
+        public CivilizationStage colonizationMinimumSourceStage = CivilizationStage.SpacePhase;
+        [Range(0f, 1f)] public float colonizationBaseChance = 0.2f;
+        [Range(0f, 1f)] public float colonizationIntelligenceBonus = 0.003f;
+        public CivilizationStage colonizationTargetStage = CivilizationStage.PrimitiveLife;
+        public bool colonizationRequiresHabitable = true;
+
+        [Header("Hard Space Destroy Protocol")]
+        public bool destroyProtocolEnabled = true;
+        [Min(0.1f)] public float destroyRocketSpeed = 4f;
+        [Min(1)] public int destroyRocketBarrageCount = 50;
+        [Min(1f)] public float destroyRocketTravelDistance = 18f;
+        [Min(0f)] public float destroyProtocolCollapseDelay = 1.75f;
+
+        public float GetColonizationChance(Planet source)
+        {
+            if (source == null || !source.HasSpecies)
+                return 0f;
+
+            return Mathf.Clamp01(colonizationBaseChance + source.Intelligence * colonizationIntelligenceBonus);
+        }
 
         public CivilizationStageConfig GetStageConfig(CivilizationStage stage)
         {
@@ -432,6 +468,89 @@ namespace Universes.Game
     }
 
     [Serializable]
+    public class Phase3BalanceConfig
+    {
+        [Header("Activation")]
+        public bool enterPhase3WhenSpeciesReachesSpace = false;
+        [Min(1)] public int maxStarSlots = 20;
+        [Min(1f)] public float maxEntropy = 500f;
+
+        [Header("Auto Star Formation")]
+        public bool autoStarFormationEnabled = true;
+        [Min(0.1f)] public float autoStarFormationCheckInterval = 5f;
+        [Range(0f, 1f)] public float autoStarFormationChance = 0f;
+        [Range(0f, 1f)] public float autoStarFormationChancePerLevel = 0.08f;
+
+        [Header("Star Layout")]
+        public Vector2 spawnAreaMin = new(-15f, -8f);
+        public Vector2 spawnAreaMax = new(15f, 8f);
+        [Min(0f)] public float minStarSeparation = 2.5f;
+
+        [Header("Black Holes")]
+        [Min(0.1f)] public float blackHoleLifetimeSeconds = 45f;
+        [Min(0f)] public float blackHoleEntropyPerSecond = 0.42f;
+        [Min(0.1f)] public float blackHoleDnaIntervalSeconds = 4f;
+        [Min(0f)] public float blackHoleDnaPotentialPerInterval = 1f;
+        [Min(0f)] public float blackHoleInitialDnaTimerMultiplier = 0.5f;
+        [Range(0f, 1f)] public float blackHoleDnaFragmentChance = 0.35f;
+        [Min(0f)] public float blackHoleParticlePullRadius = 2.5f;
+        [Range(0f, 1f)] public float blackHoleConsumeDnaChance = 0.15f;
+        [Min(0f)] public float blackHoleConsumedStardustMultiplier = 0.5f;
+        [Min(0f)] public float blackHoleGravityPullRadius = 2.5f;
+        [Min(0f)] public float blackHoleGravityPullSpeed = 1.35f;
+        [Min(0f)] public float blackHoleStarConsumeRadius = 0.42f;
+        [Min(0f)] public float blackHolePlanetConsumeRadius = 0.38f;
+        [Min(0f)] public float blackHolePlanetDamageRadius = 1.15f;
+        [Min(0f)] public float blackHolePlanetDamagePerSecond = 12f;
+        [Min(0f)] public float blackHoleStarAgeDamagePerSecond = 10f;
+
+        [Header("Star Collisions")]
+        [Min(0f)] public float starDriftSpeed = 0.07f;
+        [Min(0f)] public float starCollisionDistance = 0.85f;
+        [Min(0f)] public float collisionStardustBurst = 80f;
+        [Min(0f)] public int collisionParticleBurst = 60;
+        [Min(0f)] public float collisionAgeBonus = 8f;
+        [Min(0f)] public float collisionEntropy = 15f;
+        [Range(0f, 1f)] public float collisionDnaChance = 0.18f;
+        [Range(0f, 1f)] public float collisionBlackHoleChance = 0.12f;
+        [Min(0f)] public float collisionDnaPotential = 0f;
+        [Min(0f)] public float collisionPlanetDamageRadius = 2.5f;
+        [Min(0f)] public float collisionPlanetDamage = 65f;
+
+        [Header("Supernovas")]
+        [Min(0f)] public int supernovaParticleBurst = 120;
+        [Min(0f)] public float supernovaRadius = 2.8f;
+        [Min(0f)] public float supernovaAgeBurst = 18f;
+        [Min(0f)] public float supernovaPlanetDamageRadius = 2.25f;
+        [Min(0f)] public float supernovaPlanetDamage = 45f;
+        [Range(0f, 1f)] public float supernovaDnaChance = 0.22f;
+        [Range(0f, 1f)] public float supernovaBlackHoleChance = 0.06f;
+        [Range(0f, 1f)] public float massiveParticleDnaChance = 0.1f;
+
+        [Header("Advanced Species")]
+        [Min(0f)] public float spacePhaseDnaMultiplier = 1.6f;
+        [Min(0f)] public float hardSpaceDnaMultiplier = 3f;
+        [Min(0f)] public float spacePhasePlanetClickMultiplier = 1.1f;
+        [Min(0f)] public float hardSpacePlanetClickMultiplier = 1.25f;
+        [Min(0f)] public float hardSpaceProgressPerCivilizationTick = 0.35f;
+        [Min(0.01f)] public float hardSpaceCompletionRequirement = 5f;
+        [Min(0f)] public float hardSpaceRequiredDnaPotential = 25f;
+        [Range(0, 100)] public int hardSpaceRequiredIntelligence = 65;
+        public bool hardSpaceRequiresBlackHoleDiscovery = true;
+
+        [Header("End Universe")]
+        [Min(0f)] public float endUniverseRequiredDnaPotential = 40f;
+        [Min(0f)] public float endUniverseRequiredEntropy = 35f;
+        public bool endUniverseRequiresSpaceSpecies = true;
+        public bool endUniverseRequiresBlackHoleDiscovery = true;
+
+        [Header("Universe Collapse")]
+        [Min(0.5f)] public float universeCollapseDuration = 3.5f;
+        [Min(0.1f)] public float universeCollapsePullSpeed = 7f;
+        [Min(0.5f)] public float universeCollapseSingularityScale = 3.5f;
+    }
+
+    [Serializable]
     public class UpgradeBalanceConfig
     {
         [Min(0)] public int clickPowerBaseIncrement = 1;
@@ -442,17 +561,28 @@ namespace Universes.Game
         [Min(0f)] public float advancedStarStabilityAgeGainReductionPerLevel = 0.15f;
         [Min(0f)] public float baseClickCollectRadius = 1.1f;
         [Min(0f)] public float clickCollectRadiusPerLevel = 0.45f;
-        [Min(0f)] public float starPassiveProductionPercentPerLevel = 0.1f;
+        [Min(0f)] public float starPassiveProductionPercentPerLevel = 0.25f;
         [Min(0f)] public float collisionDnaPotentialPerLevel = 1f;
         [Range(0f, 1f)] public float entropyReductionPerLevel = 0.08f;
         [Min(0f)] public float speciesDnaPotentialPerLevel = 0.25f;
+
+        [Header("Phase 3 Upgrades")]
+        [Min(0f)] public float collisionAttractionDriftMultiplierPerLevel = 0.12f;
+        [Min(0f)] public float collisionAttractionDistancePerLevel = 0.08f;
+        [Range(0f, 1f)] public float blackHoleEntropyReductionPerLevel = 0.1f;
+        [Min(0f)] public float blackHoleMemoryDnaMultiplierPerLevel = 0.2f;
+        [Min(0f)] public float spaceAgeDnaMultiplierPerLevel = 0.15f;
+        [Min(0f)] public float spaceAgeProgressionMultiplierPerLevel = 0.12f;
+        [Range(0f, 1f)] public float cosmicEventDnaChancePerLevel = 0.025f;
+        [Min(0f)] public float orbitalDnaMultiplierPerLevel = 0.2f;
     }
 
     [Serializable]
     public class MultiStarBalanceConfig
     {
         [Min(1)] public int initialStarSlots = 1;
-        [Min(1)] public int maxStarSlots = 5;
+        [Min(1)] public int maxStarSlots = 10;
+        [Min(1f)] public float maxEntropy = 100f;
         [Min(0)] public double createStarBaseCost = 75;
         [Min(1)] public double createStarCostScale = 1.65;
         [Min(0f)] public float createStarCostIncreasePercent = 65f;
@@ -468,13 +598,13 @@ namespace Universes.Game
         [Min(0f)] public float planetDeathEntropy = 1.5f;
         [Min(0f)] public float planetCollisionDistance = 0.45f;
         [Min(0f)] public float planetCollisionDnaPotential = 4f;
-        [Min(0f)] public float planetCollisionEntropy = 5f;
+        [Min(0f)] public float planetCollisionEntropy = 1.5f;
         [Min(0f)] public float planetOverloadAgeGainPerPlanet = 0.08f;
         [Min(0)] public int planetCountBeforeOverload = 2;
 
         [Header("Planet Production")]
         [Min(0f)] public float basePlanetPassiveStardust = 1f;
-        [Min(0f)] public float planetPassiveStardustPerUpgradeLevel = 0.35f;
+        [Min(0f)] public float planetPassiveProductionPercentPerLevel = 0.5f;
         [Min(0f)] public float starClickValuePerPlanetPerUpgradeLevel = 0.5f;
         [Min(0f)] public float entropyPerActiveStarPerSecond = 0.015f;
         [Min(0f)] public float entropyPerPlanetPerSecond = 0.01f;
@@ -488,11 +618,19 @@ namespace Universes.Game
         [Min(0.1f)] public float phase1MaxZoom = 10f;
         [Min(0.1f)] public float phase2MaxZoom = 10f;
         [Min(0.1f)] public float phase3MaxZoom = 15f;
+        [Min(0.1f)] public float phase3CameraStartSize = 10f;
+        [Min(0.1f)] public float phase3CameraTargetSize = 15f;
+        [Min(0f)] public float phase3CameraZoomDuration = 1.25f;
 
         [Header("Star Layout")]
         public Vector2 spawnAreaMin = new(-7.5f, -4f);
         public Vector2 spawnAreaMax = new(7.5f, 4f);
         [Min(0f)] public float minStarSeparation = 2.5f;
+
+        [Header("Constellation")]
+        [Min(1)] public int constellationStarCount = 5;
+        [Min(0.25f)] public float constellationRadius = 2.4f;
+        [Min(0f)] public float constellationJitter = 0.18f;
 
         [Header("Star Movement")]
         [Min(0f)] public float starDriftSpeed = 0.035f;

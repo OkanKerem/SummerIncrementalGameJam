@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b4e7f2a83c1d9e5647089fab2c3d5e61, type: 3}
+  m_Name: collision_attraction
+  m_EditorClassIdentifier: 
+  upgradeType: 21
+  upgradeTier: 3
+  displayName: Collision Attraction
+  iconSprite: {fileID: 0}
+  description: Stars drift faster toward each other, increasing the chance of stellar
+    collisions.
+  baseCost: 100
+  costScale: 1.75
+  maxLevel: 10
+  upgradePrerequisites:
+  - upgradeType: 20
+    requiredLevel: 1
+  statPrerequisites: []

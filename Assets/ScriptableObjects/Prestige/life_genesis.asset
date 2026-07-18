@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 9
   displayName: Life Genesis
-  iconSprite: {fileID: 0}
+  iconSprite: {fileID: 5102405463253467307, guid: 2fc5afb5457fb3c498a1e9579fb5978d, type: 3}
   description: Increases the chance for life to emerge on habitable planets.
   maxLevel: 0
   prerequisites:

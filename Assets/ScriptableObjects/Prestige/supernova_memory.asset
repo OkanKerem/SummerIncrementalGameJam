@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 3
   displayName: Supernova Memory
-  iconSprite: {fileID: -3820215144114945063, guid: bf94a98e5ed8a994c9b08052125e642f, type: 3}
+  iconSprite: {fileID: -3576202958023711910, guid: 5af92e994df605947889d47972e1525a, type: 3}
   description: Supernovas are more likely to create DNA Fragments.
   maxLevel: 0
   prerequisites:

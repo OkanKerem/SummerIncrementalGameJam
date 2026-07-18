@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 6
   displayName: Particle Evolution
-  iconSprite: {fileID: 0}
+  iconSprite: {fileID: 5009234625745748647, guid: 623212237626a1c4fbaa063a764d3b39, type: 3}
   description: Higher chance for Stardust gains to be doubled.
   maxLevel: 0
   prerequisites:

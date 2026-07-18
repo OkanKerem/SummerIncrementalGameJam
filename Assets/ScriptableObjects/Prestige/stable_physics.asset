@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 1
   displayName: Stable Physics
-  iconSprite: {fileID: -5355937721846697555, guid: 70672aacfb581a74b8e26e5c7f385c68, type: 3}
+  iconSprite: {fileID: -325742586185704824, guid: 6d8d6f5339d7f6242b9ef7c7583c5273, type: 3}
   description: Reduces Entropy gain from all sources.
   maxLevel: 0
   prerequisites:
-  - upgradeType: 0
-    requiredLevel: 1
+  - upgradeType: 1
+    requiredLevel: 3

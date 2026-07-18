@@ -251,6 +251,9 @@ namespace Universes.Game
 
         private void LoadGameScene()
         {
+            // Returning from prestige always restarts the current run.
+            RunSave.RequestNewGame();
+
             var sceneName = PlayerPrefs.GetString(ReturnSceneKey, gameSceneName);
             if (!string.IsNullOrWhiteSpace(sceneName))
                 SceneManager.LoadScene(sceneName);

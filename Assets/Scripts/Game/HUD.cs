@@ -25,10 +25,14 @@ namespace Universes.Game
         [SerializeField] private Text createPlanetButtonText;
         [SerializeField] private Button collapseUniverseButton;
         [SerializeField] private CollapsePanel collapsePanel;
+        [SerializeField] private VictoryPanel victoryPanel;
         [SerializeField] private StarSystemEndPanel starSystemEndPanel;
+        [SerializeField] private GameObject starTooltipRoot;
+        [SerializeField] private Text starTooltipText;
 
         private float _feedbackTimer;
         private Canvas _canvas;
+        private StarView _starTooltipTarget;
 
         private void Start()
         {
@@ -37,6 +41,9 @@ namespace Universes.Game
 
             if (collapsePanel == null)
                 collapsePanel = FindAnyObjectByType<CollapsePanel>(FindObjectsInactive.Include);
+
+            if (victoryPanel == null)
+                victoryPanel = FindAnyObjectByType<VictoryPanel>(FindObjectsInactive.Include);
 
             if (starSystemEndPanel == null)
                 starSystemEndPanel = FindAnyObjectByType<StarSystemEndPanel>(FindObjectsInactive.Include);
@@ -65,7 +72,7 @@ namespace Universes.Game
 
             createStarButton?.onClick.AddListener(OnPrimaryActionClicked);
             createPlanetButton?.onClick.AddListener(OnCreatePlanetClicked);
-            collapseUniverseButton?.onClick.AddListener(() => controller.TryCollapseUniverse());
+            collapseUniverseButton?.onClick.AddListener(() => controller.TryEndUniverse());
 
             controller.OnStateChanged += Refresh;
             controller.OnStardustGained += _ => Refresh();
@@ -121,6 +128,16 @@ namespace Universes.Game
                 return;
 
             Refresh();
+
+            if (controller.IsGameWon)
+            {
+                if (victoryPanel == null)
+                    victoryPanel = FindAnyObjectByType<VictoryPanel>(FindObjectsInactive.Include);
+
+                victoryPanel?.Show();
+                return;
+            }
+
             if (collapsePanel == null)
                 collapsePanel = FindAnyObjectByType<CollapsePanel>(FindObjectsInactive.Include);
 
@@ -165,7 +182,12 @@ namespace Universes.Game
                 entropyText.transform.parent?.gameObject.SetActive(usesEntropy);
 
             if (collapseUniverseButton != null)
-                collapseUniverseButton.gameObject.SetActive(GameplayFeatures.UsesUniverseCollapse(GetGameplayMode()));
+            {
+                var showCollapse = !controller.IsSingleStarMode;
+                collapseUniverseButton.gameObject.SetActive(showCollapse);
+                if (showCollapse)
+                    collapseUniverseButton.interactable = !controller.IsRunEnded;
+            }
 
             if (blackHoleStatusText != null && !GameplayFeatures.UsesBlackHoles(GetGameplayMode()))
                 blackHoleStatusText.text = string.Empty;
@@ -181,6 +203,7 @@ namespace Universes.Game
             }
 
             RefreshStatsLive();
+            UpdateStarTooltip();
             if (GameplayFeatures.UsesBlackHoles(GetGameplayMode()))
                 RefreshBlackHoleStatus();
         }
@@ -220,20 +243,24 @@ namespace Universes.Game
                 return;
 
             var entropy = controller.Entropy;
+            var maxEntropy = controller.MaxEntropy;
             if (entropyText != null)
-                entropyText.text = $"Entropy: {entropy:0}%";
+            {
+                var percent = maxEntropy > 0f ? entropy / maxEntropy * 100f : 0f;
+                entropyText.text = $"Entropy: {percent:0.#}%";
+            }
 
             if (universeStatusText != null)
-                universeStatusText.text = EntropyBalance.GetStatusLabel(entropy);
+                universeStatusText.text = EntropyBalance.GetStatusLabel(entropy, maxEntropy);
 
             if (entropySlider != null)
             {
                 entropySlider.interactable = false;
-                entropySlider.value = entropy / 100f;
+                entropySlider.value = maxEntropy > 0f ? entropy / maxEntropy : 0f;
             }
 
             if (entropyFillImage != null)
-                entropyFillImage.color = GetEntropyColor(entropy);
+                entropyFillImage.color = GetEntropyColor(maxEntropy > 0f ? entropy / maxEntropy * 100f : 0f);
         }
 
         private void RefreshBlackHoleStatus()
@@ -246,8 +273,9 @@ namespace Universes.Game
             {
                 blackHoleStatusText.text =
                     $"Black Holes: {controller.ActiveBlackHoleCount}  |  " +
-                    $"DNA Potential: {controller.RunStats.BlackHoleDnaPotential:0}\n" +
-                    "Black Hole destabilizing the universe.";
+                    $"DNA Potential: +{controller.ActiveBlackHoleDnaPerSecond:0.0}/s  |  " +
+                    $"Instability: +{controller.ActiveBlackHoleInstabilityPerSecond:0.0}/s\n" +
+                    "Warning: Black Holes are destabilizing the universe.";
                 blackHoleStatusText.color = new Color(1f, 0.55f, 0.75f);
             }
             else
@@ -283,7 +311,7 @@ namespace Universes.Game
                 }
                 else
                 {
-                    createStarButton.interactable = canPlay && controller.CanCreateNewStar(out _);
+                    createStarButton.interactable = canPlay && controller.CanCreateStarOrConstellation(out _);
                 }
             }
 
@@ -297,12 +325,20 @@ namespace Universes.Game
                         : controller.SingleStarBalance.createPlanetCost;
                     createStarButtonText.text = $"Create Planet ({createCost:0})";
                 }
+                else if (GameplayFeatures.UsesUniverseCollapse(GetGameplayMode()))
+                {
+                    var createCost = controller.GetCreateConstellationCost();
+                    var count = controller.GetConstellationStarCount();
+                    createStarButtonText.text = controller.CanCreateConstellation(out var reason)
+                        ? $"Create Constellation x{count} ({createCost:0})"
+                        : $"Create Constellation ({reason})";
+                }
                 else
                 {
                     var createCost = controller.GetCreateStarCost();
                     createStarButtonText.text = controller.CanCreateNewStar(out var reason)
-                        ? $"Buy Star ({createCost:0})"
-                        : $"Buy Star ({reason})";
+                        ? $"Create Star ({createCost:0})"
+                        : $"Create Star ({reason})";
                 }
             }
 
@@ -331,8 +367,12 @@ namespace Universes.Game
             }
 
             if (collapseUniverseButton != null)
-                collapseUniverseButton.interactable = canPlay &&
-                                                      GameplayFeatures.UsesUniverseCollapse(GetGameplayMode());
+            {
+                var showCollapse = !controller.IsSingleStarMode;
+                collapseUniverseButton.gameObject.SetActive(showCollapse);
+                if (showCollapse)
+                    collapseUniverseButton.interactable = canPlay;
+            }
         }
 
         private GameplayMode GetGameplayMode()
@@ -348,62 +388,171 @@ namespace Universes.Game
             if (statsText == null || controller == null)
                 return;
 
-            if (controller.IsRunEnded)
+            statsText.text = FormatSurvivalTime(controller.RunStats.SurvivalTimeSeconds);
+        }
+
+        public void ShowStarTooltip(StarView star)
+        {
+            if (star == null || controller == null || controller.IsRunEnded || controller.IsCollapsed)
+                return;
+
+            EnsureStarTooltip();
+            if (starTooltipRoot == null || starTooltipText == null)
+                return;
+
+            _starTooltipTarget = star;
+            starTooltipText.text = BuildStarTooltipText(star);
+            PositionStarTooltip(star.transform.position);
+            starTooltipRoot.SetActive(true);
+        }
+
+        public void HideStarTooltip()
+        {
+            _starTooltipTarget = null;
+            if (starTooltipRoot != null)
+                starTooltipRoot.SetActive(false);
+        }
+
+        private void UpdateStarTooltip()
+        {
+            if (controller == null || controller.IsRunEnded || controller.IsCollapsed)
             {
-                statsText.text = controller.IsSingleStarMode
-                    ? "Star system ended. Review your summary and start a new system."
-                    : "Universe collapsed. Universe DNA is permanent — spend it on prestige upgrades, then start a new universe.";
+                HideStarTooltip();
                 return;
             }
 
-            if (controller.IsSingleStarMode && controller.CentralStar != null)
-            {
-                var manager = controller.PlanetManager;
-                var max = manager != null && manager.IsInitialized
-                    ? manager.GetMaxPlanets()
-                    : PlanetBalance.BaseMaxPlanets;
-                var count = manager != null && manager.IsInitialized
-                    ? manager.PlanetCount
-                    : 0;
-                statsText.text =
-                    $"Star Age: {controller.StarAge}/{controller.GetMaxStarHealth()} ({controller.Stage})\n" +
-                    $"Click: +{controller.GetClickReward()}  |  Passive: +{controller.GetTotalPassivePerSecond()}/s\n" +
-                    $"Planets: {count}/{max}  |  DNA Potential: {controller.DnaPotential:0}";
-                return;
-            }
+            if (Input.GetKeyDown(KeyCode.Escape))
+                HideStarTooltip();
 
-            if (!controller.IsSingleStarMode && controller.HasActiveStar)
+            if (Input.GetMouseButtonDown(1) && !IsPointerOverUi())
             {
-                var lines = new System.Text.StringBuilder();
-                lines.AppendLine($"Stars: {controller.ActiveStarCount}/{controller.MaxStarSlots}  |  Passive: +{controller.GetTotalPassivePerSecond()}/s");
-                foreach (var star in controller.Stars)
+                var star = StarView.GetStarUnderMouse();
+                if (star != null && star.IsInteractable)
                 {
-                    if (star == null || !star.IsInteractable)
-                        continue;
-
-                    var maxPlanets = controller.PlanetManager != null
-                        ? controller.PlanetManager.GetMaxPlanets()
-                        : PlanetBalance.BaseMaxPlanets;
-                    var selected = star == controller.SelectedStar ? "* " : "";
-                    lines.AppendLine(
-                        $"{selected}{star.StarName}: {star.Stage}, Age {star.StarAge}/{controller.GetMaxStarHealth()}  |  " +
-                        $"Click +{controller.GetClickReward(star)}  |  Passive +{controller.GetPassivePerSecond(star)}/s  |  " +
-                        $"Planets {controller.GetPlanetCountForStar(star)}/{maxPlanets}");
+                    if (_starTooltipTarget == star)
+                        HideStarTooltip();
+                    else
+                        ShowStarTooltip(star);
                 }
+                else if (_starTooltipTarget != null)
+                {
+                    HideStarTooltip();
+                }
+            }
 
-                statsText.text = lines.ToString().TrimEnd();
-            }
-            else if (controller.HasActiveStar)
+            if (_starTooltipTarget == null)
+                return;
+
+            if (!_starTooltipTarget.IsInteractable)
             {
-                statsText.text =
-                    $"Stars: {controller.ActiveStarCount}  |  Primary Age: {controller.StarAge}/100 ({controller.Stage})\n" +
-                    $"Click: +{controller.GetClickReward()}  |  Passive: +{controller.GetTotalPassivePerSecond()}/s\n" +
-                    $"Collect radius: {controller.GetClickCollectRadius():0.0}  |  Supernova bonus: +{controller.GetSupernovaBonus()}";
+                HideStarTooltip();
+                return;
             }
-            else
-            {
-                statsText.text = $"No active stars\nSupernova bonus: +{controller.GetSupernovaBonus()}";
-            }
+
+            RefreshActiveStarTooltip(_starTooltipTarget);
+        }
+
+        private void RefreshActiveStarTooltip(StarView star)
+        {
+            if (starTooltipRoot == null || starTooltipText == null || !starTooltipRoot.activeSelf)
+                return;
+
+            starTooltipText.text = BuildStarTooltipText(star);
+            PositionStarTooltip(star.transform.position);
+        }
+
+        private static bool IsPointerOverUi() =>
+            UnityEngine.EventSystems.EventSystem.current != null &&
+            UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
+
+        private string BuildStarTooltipText(StarView star)
+        {
+            var manager = controller.PlanetManager;
+            var maxPlanets = manager != null && manager.IsInitialized
+                ? manager.GetMaxPlanets()
+                : PlanetBalance.BaseMaxPlanets;
+            var planetCount = controller.GetPlanetCountForStar(star);
+            var selected = !controller.IsSingleStarMode && controller.SelectedStar == star ? "\nSelected star" : string.Empty;
+            var starCountLine = controller.IsSingleStarMode
+                ? string.Empty
+                : $"\nStars in system: {controller.ActiveStarCount}/{controller.MaxStarSlots}";
+
+            return $"{star.StarName}\n" +
+                   $"Age: {star.StarAge}/{star.MaxStarAge} years\n" +
+                   $"Stage: {star.Stage}\n" +
+                   $"Planets: {planetCount}/{maxPlanets}\n" +
+                   $"Click: +{controller.GetClickReward(star)}\n" +
+                   $"Passive: +{controller.GetPassivePerSecond(star)}/s" +
+                   selected +
+                   starCountLine;
+        }
+
+        private void PositionStarTooltip(Vector3 worldPosition)
+        {
+            if (starTooltipRoot == null)
+                return;
+
+            if (_canvas == null)
+                _canvas = GetComponent<Canvas>();
+
+            var canvasRect = _canvas != null ? _canvas.transform as RectTransform : null;
+            if (canvasRect == null)
+                return;
+
+            var camera = _canvas.renderMode == RenderMode.ScreenSpaceOverlay
+                ? null
+                : _canvas.worldCamera != null ? _canvas.worldCamera : Camera.main;
+            var screenPoint = RectTransformUtility.WorldToScreenPoint(Camera.main, worldPosition);
+            if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screenPoint, camera,
+                    out var localPoint))
+                return;
+
+            var tooltipRect = starTooltipRoot.GetComponent<RectTransform>();
+            tooltipRect.anchoredPosition = localPoint + new Vector2(28f, 36f);
+        }
+
+        private void EnsureStarTooltip()
+        {
+            if (starTooltipRoot != null && starTooltipText != null)
+                return;
+
+            if (_canvas == null)
+                _canvas = GetComponent<Canvas>();
+
+            var parent = transform;
+            starTooltipRoot = new GameObject("StarTooltip", typeof(RectTransform), typeof(Image));
+            starTooltipRoot.transform.SetParent(parent, false);
+            var tooltipRect = starTooltipRoot.GetComponent<RectTransform>();
+            tooltipRect.anchorMin = new Vector2(0.5f, 0.5f);
+            tooltipRect.anchorMax = new Vector2(0.5f, 0.5f);
+            tooltipRect.pivot = new Vector2(0f, 0.5f);
+            tooltipRect.sizeDelta = new Vector2(260f, 170f);
+            var tooltipImage = starTooltipRoot.GetComponent<Image>();
+            tooltipImage.color = new Color(0.04f, 0.055f, 0.08f, 0.96f);
+            tooltipImage.raycastTarget = false;
+
+            var textGo = new GameObject("TooltipText", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            textGo.transform.SetParent(starTooltipRoot.transform, false);
+            starTooltipText = textGo.GetComponent<Text>();
+            starTooltipText.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            starTooltipText.fontSize = 14;
+            starTooltipText.alignment = TextAnchor.UpperLeft;
+            starTooltipText.color = new Color(0.85f, 0.92f, 1f);
+            starTooltipText.raycastTarget = false;
+            var textRect = starTooltipText.rectTransform;
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(12f, 10f);
+            textRect.offsetMax = new Vector2(-12f, -10f);
+
+            starTooltipRoot.SetActive(false);
+        }
+
+        private static string FormatSurvivalTime(float seconds)
+        {
+            var minutes = Mathf.FloorToInt(seconds / 60f);
+            var secs = Mathf.FloorToInt(seconds % 60f);
+            return $"{minutes:00}:{secs:00}";
         }
 
         private void ShowMessage(string message)

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 11
   displayName: Planetary Legacy
-  iconSprite: {fileID: 0}
+  iconSprite: {fileID: -2032692973490661385, guid: 5f43da8739fe9d94bbff10459afec963, type: 3}
   description: Destroyed planets release additional DNA potential.
   maxLevel: 0
   prerequisites:

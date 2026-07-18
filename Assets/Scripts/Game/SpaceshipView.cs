@@ -42,7 +42,9 @@ namespace Universes.Game
 
             if (shipRenderer != null)
             {
-                shipRenderer.sprite = SelectSprite(shipSprites);
+                // Keep the prefab's own sprite when using a spaceship prefab.
+                if (!_preservePrefabVisuals || shipRenderer.sprite == null)
+                    shipRenderer.sprite = SelectSprite(shipSprites) ?? shipRenderer.sprite;
 
                 if (!_preservePrefabVisuals)
                 {

@@ -59,6 +59,7 @@ namespace Universes.Game
         public SpeciesBalanceConfig species = new();
         public PlanetBalanceConfig planets = new();
         public CivilizationBalanceConfig civilization = new();
+        public Phase3BalanceConfig phase3 = new();
         public UpgradeBalanceConfig upgrades = new();
         public MultiStarBalanceConfig multiStar = new();
 
@@ -69,6 +70,7 @@ namespace Universes.Game
             species ??= new SpeciesBalanceConfig();
             planets ??= new PlanetBalanceConfig();
             civilization ??= new CivilizationBalanceConfig();
+            phase3 ??= new Phase3BalanceConfig();
             upgrades ??= new UpgradeBalanceConfig();
             multiStar ??= new MultiStarBalanceConfig();
         }

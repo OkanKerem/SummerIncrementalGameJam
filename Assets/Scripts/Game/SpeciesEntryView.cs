@@ -14,7 +14,7 @@ namespace Universes.Game
         private Planet _planet;
         private SpeciesPanel _panel;
 
-        public void Bind(Planet planet, SpeciesPanel panel)
+        public void Bind(Planet planet, SpeciesPanel panel, int colonyCount = 1)
         {
             _planet = planet;
             _panel = panel;
@@ -23,7 +23,13 @@ namespace Universes.Game
                 return;
 
             if (speciesNameText != null)
-                speciesNameText.text = planet.HasSpecies ? planet.SpeciesName : "No species yet";
+            {
+                speciesNameText.text = planet.HasSpecies
+                    ? colonyCount > 1
+                        ? $"{planet.SpeciesName} ({colonyCount} worlds)"
+                        : planet.SpeciesName
+                    : "No species yet";
+            }
 
             var directAlien = GetDirectAlienPortraitRoot();
             if (directAlien != null)

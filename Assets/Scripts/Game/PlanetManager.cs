@@ -18,12 +18,16 @@ namespace Universes.Game
         private readonly List<Planet> _planets = new();
         private readonly Dictionary<int, PlanetView> _views = new();
         private readonly List<GameObject> _spaceships = new();
+        private readonly List<SpaceStationView> _spaceStations = new();
+        private DestroyRocketPool _destroyRocketPool;
         private int _nextPlanetId = 1;
         private float _autoFormationTimer;
         private float _civilizationTimer;
         private float _dnaTimer;
         private float _spaceTravelTimer;
+        private float _spaceStationTimer;
         private int _activeSpaceships;
+        private bool _destroyProtocolStarted;
 
         public IReadOnlyList<Planet> Planets => _planets;
         public int PlanetCount => _planets.Count(p => p.IsAlive);
@@ -67,15 +71,26 @@ namespace Universes.Game
                     Destroy(spaceship);
             }
 
+            foreach (var station in _spaceStations)
+            {
+                if (station != null)
+                    Destroy(station.gameObject);
+            }
+
+            _destroyRocketPool?.ReturnAll();
+
             _planets.Clear();
             _views.Clear();
             _spaceships.Clear();
+            _spaceStations.Clear();
             _nextPlanetId = 1;
             _autoFormationTimer = 0f;
             _civilizationTimer = 0f;
             _dnaTimer = 0f;
             _spaceTravelTimer = 0f;
+            _spaceStationTimer = 0f;
             _activeSpaceships = 0;
+            _destroyProtocolStarted = false;
             HighestCivilizationRank = 0;
             StopAllCoroutines();
         }
@@ -126,12 +141,62 @@ namespace Universes.Game
         public int GetPlanetCountForStar(int starId) =>
             _planets.Count(p => p.IsAlive && p.HostStarId == starId);
 
-        public bool TryCreatePlanet(bool free = false)
+        public float GetStarOrbitFootprintRadius(int starId)
         {
-            if (_controller == null || _hostStar == null || !_hostStar.IsInteractable)
+            if (Balance == null)
+                return 0f;
+
+            var planetCount = GetPlanetCountForStar(starId);
+            return GetOrbitFootprintForPlanetCount(planetCount);
+        }
+
+        public float GetEstimatedEmptyStarOrbitFootprintRadius() =>
+            GetOrbitFootprintForPlanetCount(GetMaxPlanets());
+
+        private float GetOrbitFootprintForPlanetCount(int planetCount)
+        {
+            if (Balance == null)
+                return 0f;
+
+            var scaledCount = Mathf.Max(0, planetCount);
+            var orbitReach = Balance.baseOrbitRadius + scaledCount * Balance.orbitRadiusStep;
+            var ellipseScale = Mathf.Max(orbitEllipseScale.x, orbitEllipseScale.y);
+            return orbitReach * ellipseScale;
+        }
+
+        public void HideAllOrbitLines()
+        {
+            foreach (var view in _views.Values)
+                view?.HideOrbitLine();
+        }
+
+        public void PullAllToward(Vector3 center, float speed, float deltaTime)
+        {
+            foreach (var view in _views.Values)
+            {
+                if (view == null)
+                    continue;
+
+                view.HideOrbitLine();
+                view.transform.position = Vector3.MoveTowards(
+                    view.transform.position,
+                    center,
+                    speed * deltaTime);
+                view.transform.localScale = Vector3.Max(
+                    view.transform.localScale * (1f - deltaTime * 1.1f),
+                    Vector3.one * 0.01f);
+            }
+        }
+
+        public bool TryCreatePlanet(bool free = false) =>
+            TryCreatePlanetForStar(_hostStar, free);
+
+        public bool TryCreatePlanetForStar(StarView hostStar, bool free = false, bool playCreationSound = true)
+        {
+            if (_controller == null || hostStar == null || !hostStar.IsInteractable)
                 return false;
 
-            if (!HasOpenSlot())
+            if (GetPlanetCountForStar(hostStar.StarId) >= GetMaxPlanets())
                 return false;
 
             if (!free)
@@ -143,7 +208,7 @@ namespace Universes.Game
                 _controller.SpendStardust(cost);
             }
 
-            CreateRandomPlanet();
+            CreateRandomPlanetForStar(hostStar, playCreationSound);
             return true;
         }
 
@@ -160,6 +225,7 @@ namespace Universes.Game
             TickCivilization(deltaTime);
             TickDnaGeneration(deltaTime);
             TickSpaceTravel(deltaTime);
+            TickSpaceStations(deltaTime);
         }
 
         public void OnPlanetClicked(PlanetView view)
@@ -195,11 +261,21 @@ namespace Universes.Game
                 DestroyPlanet(id, recordDestruction: false);
         }
 
-        private void CreateRandomPlanet() => StartCoroutine(CreateRandomPlanetRoutine());
+        private void CreateRandomPlanet() => CreateRandomPlanetForStar(_hostStar);
 
-        private IEnumerator CreateRandomPlanetRoutine()
+        private void CreateRandomPlanetForStar(StarView hostStar, bool playCreationSound = true)
         {
-            var hostStar = _hostStar;
+            if (hostStar == null)
+                return;
+
+            StartCoroutine(CreateRandomPlanetRoutine(hostStar, playCreationSound));
+        }
+
+        private IEnumerator CreateRandomPlanetRoutine(StarView hostStar, bool playCreationSound = true)
+        {
+            if (hostStar == null || !hostStar.IsInteractable)
+                yield break;
+
             var slot = FindOpenOrbitSlot(hostStar.StarId);
             if (slot < 0)
                 yield break;
@@ -221,19 +297,10 @@ namespace Universes.Game
                 PrestigeModifiers.GetPlanetLifetimeMultiplier(_controller.Prestige));
             _planets.Add(planet);
 
-            if (habitable && planet.IsHabitable &&
-                UnityEngine.Random.value < Mathf.Clamp01(
-                    Balance.lifeProgressBase * Balance.planets.initialLifeChanceMultiplier *
-                    PrestigeModifiers.GetLifeEmergenceChanceMultiplier(_controller.Prestige)))
-            {
-                EnsureLifeIdentity(planet);
-                planet.ForceLifeStage(CivilizationStage.PrimitiveLife);
-            }
-
             OnPlanetsChanged?.Invoke();
             _controller.NotifyStateChanged();
 
-            PlayPlanetSpawnEffect(planet);
+            PlayPlanetSpawnEffect(planet, playCreationSound);
 
             var delay = Balance.planetSpawnDelay;
             if (delay > 0f)
@@ -277,7 +344,7 @@ namespace Universes.Game
                 Balance.planets);
         }
 
-        private void PlayPlanetSpawnEffect(Planet planet)
+        private void PlayPlanetSpawnEffect(Planet planet, bool playSound = true)
         {
             if (planet?.Definition == null)
                 return;
@@ -287,7 +354,8 @@ namespace Universes.Game
                 return;
 
             var position = hostStar.transform.position + GetOrbitOffset(planet);
-            _controller.SfxManager?.PlayPlanetCreated();
+            if (playSound)
+                _controller.SfxManager?.PlayPlanetCreated();
             planet.Definition.PlayEffect(planet.Definition.spawnEffectPrefab, position, planetsRoot);
         }
 
@@ -354,6 +422,26 @@ namespace Universes.Game
             return Mathf.Max(0.05f, definition.visualScale * 0.5f);
         }
 
+        public float GetSpaceStationOrbitRadius(Planet planet)
+        {
+            if (Balance == null || planet == null)
+                return 0.75f;
+
+            var civ = Balance.civilization;
+            var planetRadius = GetPlanetVisualRadius(planet.Definition);
+            if (_views.TryGetValue(planet.Id, out var view) && view != null)
+            {
+                var renderer = view.GetComponent<SpriteRenderer>();
+                if (renderer != null)
+                {
+                    var extents = renderer.bounds.extents;
+                    planetRadius = Mathf.Max(planetRadius, extents.x, extents.y);
+                }
+            }
+
+            return civ.spaceStationOrbitRadius + planetRadius * civ.spaceStationOrbitRadiusPlanetMultiplier;
+        }
+
         private bool RollHabitable(PlanetTypeDefinition definition, StarView hostStar)
         {
             if (definition == null || definition.habitability <= 0f || hostStar == null)
@@ -374,15 +462,41 @@ namespace Universes.Game
                 return;
 
             _autoFormationTimer = 0f;
-            if (!HasOpenSlot())
-                return;
 
             var chance = Balance.baseAutoFormationChance +
                          _controller.Upgrades.AutoPlanetFormationLevel *
                          Balance.autoFormationChancePerLevel;
 
-            if (UnityEngine.Random.value < chance)
-                TryCreatePlanet(free: true);
+            var createdAny = false;
+            foreach (var hostStar in GetStarsWithOpenPlanetSlots())
+            {
+                if (UnityEngine.Random.value < chance &&
+                    TryCreatePlanetForStar(hostStar, free: true, playCreationSound: false))
+                {
+                    createdAny = true;
+                }
+            }
+
+            if (createdAny)
+                _controller.SfxManager?.PlayPlanetCreated();
+        }
+
+        private List<StarView> GetStarsWithOpenPlanetSlots()
+        {
+            var candidates = new List<StarView>();
+            if (_controller == null)
+                return candidates;
+
+            var maxPlanets = GetMaxPlanets();
+            foreach (var star in _controller.Stars)
+            {
+                if (star == null || !star.IsInteractable)
+                    continue;
+                if (GetPlanetCountForStar(star.StarId) < maxPlanets)
+                    candidates.Add(star);
+            }
+
+            return candidates;
         }
 
         private void TickCivilization(float deltaTime)
@@ -417,6 +531,9 @@ namespace Universes.Game
                                GetIntelligenceProgressFactor(planet) *
                                _controller.GetEffectiveAgeGainMultiplier();
 
+                if (planet.CivilizationStage == CivilizationStage.SpacePhase)
+                    progress *= _controller.GetSpaceAgeProgressionMultiplier();
+
                 if (planet.CivilizationStage == CivilizationStage.NoLife)
                 {
                     if (UnityEngine.Random.value < Mathf.Clamp01(
@@ -424,11 +541,7 @@ namespace Universes.Game
                     {
                         EnsureLifeIdentity(planet);
                         planet.ForceLifeStage(CivilizationStage.PrimitiveLife);
-                        if (!planet.LifeCountedForStats)
-                        {
-                            planet.LifeCountedForStats = true;
-                            _controller.RunStats.RecordLifePlanet();
-                        }
+                        RecordLifeIfNeeded(planet);
 
                         NotifyCivilizationAdvanced(planet, CivilizationStage.PrimitiveLife);
                     }
@@ -436,18 +549,22 @@ namespace Universes.Game
                 else if (planet.TryAddCivilizationProgress(
                              progress * PrestigeModifiers.GetCivilizationProgressMultiplier(_controller.Prestige),
                              Balance.civilization,
+                             nextStage => CanPlanetEnterCivilizationStage(planet, nextStage),
                              out var advancedTo))
                 {
                     NotifyCivilizationAdvanced(planet, advancedTo);
                 }
 
                 TickAggressionRisk(planet);
+                TickHardSpaceCompletion(planet);
 
                 var rank = (int)planet.CivilizationStage;
                 if (rank > HighestCivilizationRank)
                 {
                     HighestCivilizationRank = rank;
-                    _controller.RunStats.RecordHighestCivilization(planet.CivilizationStage);
+                    _controller.RunStats.RecordHighestCivilization(
+                        planet.CivilizationStage,
+                        planet.SpeciesName);
                 }
 
                 if (_views.TryGetValue(planet.Id, out var view))
@@ -455,12 +572,75 @@ namespace Universes.Game
             }
         }
 
+        private void RecordLifeIfNeeded(Planet planet)
+        {
+            if (planet == null || planet.CivilizationStage < CivilizationStage.PrimitiveLife ||
+                planet.LifeCountedForStats || _controller == null)
+                return;
+
+            planet.LifeCountedForStats = true;
+            _controller.RunStats.RecordLifePlanet();
+            _controller.NotifyStateChanged();
+        }
+
         private void NotifyCivilizationAdvanced(Planet planet, CivilizationStage stage)
         {
             if (stage == CivilizationStage.PrimitiveLife)
                 _controller?.SfxManager?.PlayLifeEmerged();
 
+            if (stage == CivilizationStage.SpacePhase && planet != null)
+            {
+                planet.AssignSpaceProgramName(SpeciesNaming.GenerateSpaceProgramName(planet.SpeciesName));
+                OnCivilizationEvent?.Invoke(
+                    $"Space Age Reached: {planet.SpeciesName} launched {planet.SpaceProgramName} from {GetPlanetDisplayName(planet)}.");
+                _controller?.TryEnterPhase3FromSpecies(planet);
+            }
+            else if (stage == CivilizationStage.HardSpace && planet != null)
+            {
+                // Destroy Protocol is Phase 2 only. Phase 3 Hard Space uses the ascension win path.
+                if (_controller != null && !GameplayFeatures.UsesUniverseCollapse(_controller.GameplayMode))
+                {
+                    OnCivilizationEvent?.Invoke(
+                        $"Destroy Protocol: {planet.SpeciesName} launched annihilation rockets from {GetPlanetDisplayName(planet)}.");
+                    StartDestroyProtocol(planet);
+                }
+                else
+                {
+                    OnCivilizationEvent?.Invoke(
+                        $"Hard Space Reached: {planet.SpeciesName} begins final ascension from {GetPlanetDisplayName(planet)}.");
+                }
+            }
+
             OnCivilizationAdvanced?.Invoke(planet, stage);
+        }
+
+        private bool CanPlanetEnterCivilizationStage(Planet planet, CivilizationStage stage)
+        {
+            if (stage != CivilizationStage.HardSpace || _controller == null || Balance?.phase3 == null)
+                return true;
+
+            return _controller.CanSpeciesEnterHardSpace(planet);
+        }
+
+        private void TickHardSpaceCompletion(Planet planet)
+        {
+            if (_destroyProtocolStarted || planet == null || _controller == null || Balance?.phase3 == null ||
+                planet.CivilizationStage != CivilizationStage.HardSpace)
+                return;
+
+            // Before Phase 3, Hard Space always ends via the destroy protocol (game over).
+            if (!GameplayFeatures.UsesUniverseCollapse(_controller.GameplayMode))
+                return;
+
+            // Absolute progress per civilization tick toward the Phase 3 ascension win.
+            var progress = Balance.phase3.hardSpaceProgressPerCivilizationTick *
+                           GetIntelligenceProgressFactor(planet) *
+                           Mathf.Max(0.25f, _controller.GetSpaceAgeProgressionMultiplier());
+            if (planet.AddHardSpaceCompletionProgress(progress,
+                    Balance.phase3.hardSpaceCompletionRequirement))
+            {
+                _controller.CompleteHardSpaceWin(planet);
+            }
         }
 
         private static float GetIntelligenceProgressFactor(Planet planet)
@@ -556,7 +736,9 @@ namespace Universes.Game
                     var speciesMultiplier = planet.HasSpecies
                         ? Balance.species.GetDnaPotentialMultiplier(planet.Intelligence, planet.Aggression)
                         : 1f;
-                    var amount = (Balance.planets.baseDnaPotentialAmount + civMult) * speciesMultiplier;
+                    var amount = (Balance.planets.baseDnaPotentialAmount + civMult) *
+                                 speciesMultiplier *
+                                 _controller.GetAdvancedSpeciesDnaMultiplier(planet.CivilizationStage);
                     var position = GetPlanetWorldPosition(planet);
                     _controller.TrySpawnDnaPotential(position, amount);
                 }
@@ -623,8 +805,302 @@ namespace Universes.Game
                 {
                     _spaceships.Remove(go);
                     _activeSpaceships = Mathf.Max(0, _activeSpaceships - 1);
-                    _controller.TrySpawnDnaPotential(arrivalPosition, Balance.civilization.spaceshipDnaPotentialPerTrip);
+                    _controller.TrySpawnDnaPotential(
+                        arrivalPosition,
+                        Balance.civilization.spaceshipDnaPotentialPerTrip * _controller.GetOrbitalDnaMultiplier());
+                    TryColonizeOnArrival(source, destination);
                 });
+        }
+
+        private void TickSpaceStations(float deltaTime)
+        {
+            if (Balance == null || _controller == null)
+                return;
+
+            var civ = Balance.civilization;
+            if (civ == null || civ.spaceStationPrefab == null || civ.maxActiveSpaceStations <= 0)
+                return;
+
+            _spaceStations.RemoveAll(station => station == null);
+            if (_spaceStations.Count >= civ.maxActiveSpaceStations)
+                return;
+
+            _spaceStationTimer += deltaTime;
+            if (_spaceStationTimer < civ.spaceStationSpawnInterval)
+                return;
+
+            _spaceStationTimer = 0f;
+            TrySpawnSpaceStation();
+        }
+
+        private void TrySpawnSpaceStation()
+        {
+            if (!TryPickSpaceStationLaunch(out var source, out var destination))
+                return;
+
+            var civ = Balance.civilization;
+            var sprites = civ.spaceStationSprites != null && civ.spaceStationSprites.Length > 0
+                ? civ.spaceStationSprites
+                : civ.spaceshipSprites;
+
+            var go = Instantiate(civ.spaceStationPrefab, planetsRoot);
+            go.transform.SetParent(planetsRoot, true);
+            var station = go.GetComponent<SpaceStationView>() ?? go.AddComponent<SpaceStationView>();
+            _spaceStations.Add(station);
+            station.Initialize(
+                this,
+                _controller,
+                source,
+                destination,
+                civ,
+                sprites,
+                civ.spaceshipAlienPortraitPrefab,
+                civ.spaceStationPrefab != null);
+        }
+
+        public bool TryPickSpaceStationLaunch(out Planet source, out Planet destination)
+        {
+            source = PickSpaceStationPlanet();
+            destination = null;
+            if (source == null)
+                return false;
+
+            var sourceId = source.Id;
+            var destinations = _planets.Where(p => p.IsAlive && p.Id != sourceId).ToList();
+            if (destinations.Count == 0)
+                return false;
+
+            destination = destinations[UnityEngine.Random.Range(0, destinations.Count)];
+            return true;
+        }
+
+        public Planet PickSpaceStationDestinationPlanet(int excludePlanetId = -1)
+        {
+            var destinations = _planets.Where(p => p.IsAlive && p.Id != excludePlanetId).ToList();
+            if (destinations.Count == 0)
+                return null;
+
+            return destinations[UnityEngine.Random.Range(0, destinations.Count)];
+        }
+
+        public Planet PickSpaceStationPlanet(int excludePlanetId = -1) =>
+            PickSpaceStationPlanetAtStage(excludePlanetId, Balance.civilization.spaceStationMinimumStage);
+
+        private Planet PickSpaceStationPlanetAtStage(int excludePlanetId, CivilizationStage minimumStage)
+        {
+            var candidates = _planets
+                .Where(p => p.IsAlive && p.Id != excludePlanetId && p.HasSpecies &&
+                            p.CivilizationStage >= minimumStage)
+                .ToList();
+            if (candidates.Count == 0)
+                return null;
+
+            return candidates[UnityEngine.Random.Range(0, candidates.Count)];
+        }
+
+        public void UnregisterSpaceStation(SpaceStationView station) => _spaceStations.Remove(station);
+
+        public Planet GetPlanetById(int planetId) => _planets.FirstOrDefault(p => p.Id == planetId);
+
+        public void DestroyPlanetById(int planetId, bool grantDna = true) =>
+            DestroyPlanet(planetId, recordDestruction: true, causeStarDamage: true, grantDna: grantDna);
+
+        private void StartDestroyProtocol(Planet sourcePlanet)
+        {
+            if (_destroyProtocolStarted || _controller == null || Balance?.civilization == null)
+                return;
+
+            if (GameplayFeatures.UsesUniverseCollapse(_controller.GameplayMode))
+                return;
+
+            var civ = Balance.civilization;
+            if (!civ.destroyProtocolEnabled)
+                return;
+
+            _destroyProtocolStarted = true;
+            EnsureDestroyRocketPool();
+            StartCoroutine(DestroyProtocolRoutine(sourcePlanet));
+        }
+
+        private void EnsureDestroyRocketPool()
+        {
+            if (_destroyRocketPool != null)
+                return;
+
+            _destroyRocketPool = FindAnyObjectByType<DestroyRocketPool>(FindObjectsInactive.Include);
+        }
+
+        private IEnumerator DestroyProtocolRoutine(Planet sourcePlanet)
+        {
+            var civ = Balance.civilization;
+            var origin = sourcePlanet != null
+                ? GetPlanetWorldPosition(sourcePlanet)
+                : Vector3.zero;
+            var speciesName = sourcePlanet != null ? sourcePlanet.SpeciesName : "Unknown";
+            var targets = BuildDestroyProtocolTargets(sourcePlanet);
+
+            if (targets.Count == 0 || _destroyRocketPool == null || _destroyRocketPool.AvailableCount <= 0)
+            {
+                WipeAllForDestroyProtocol();
+                var fallbackDelay = Mathf.Max(0.2f, civ.destroyProtocolCollapseDelay);
+                yield return new WaitForSeconds(fallbackDelay);
+                _controller?.BeginDestroyProtocolCollapse(speciesName);
+                yield break;
+            }
+
+            var pending = 0;
+            var launchIndex = 0;
+            while (launchIndex < targets.Count)
+            {
+                while (launchIndex < targets.Count && _destroyRocketPool.AvailableCount > 0)
+                {
+                    var target = targets[launchIndex++];
+                    pending++;
+                    LaunchDestroyRocket(
+                        origin,
+                        target.GetPosition(),
+                        target.GetPosition,
+                        _ =>
+                        {
+                            target.OnHit?.Invoke();
+                            pending = Mathf.Max(0, pending - 1);
+                        });
+                }
+
+                yield return null;
+            }
+
+            var timeout = 12f;
+            while (pending > 0 && timeout > 0f)
+            {
+                timeout -= Time.deltaTime;
+                yield return null;
+            }
+
+            WipeAllForDestroyProtocol();
+
+            var delay = Mathf.Max(0.15f, civ.destroyProtocolCollapseDelay);
+            yield return new WaitForSeconds(delay);
+
+            _controller?.BeginDestroyProtocolCollapse(speciesName);
+        }
+
+        private List<DestroyRocketTarget> BuildDestroyProtocolTargets(Planet sourcePlanet)
+        {
+            var targets = new List<DestroyRocketTarget>();
+            var sourceId = sourcePlanet?.Id ?? -1;
+
+            foreach (var planet in _planets.Where(p => p.IsAlive).ToList())
+            {
+                var planetId = planet.Id;
+                targets.Add(new DestroyRocketTarget(
+                    () =>
+                    {
+                        var live = GetPlanetById(planetId);
+                        return live != null && live.IsAlive
+                            ? GetPlanetWorldPosition(live)
+                            : Vector3.zero;
+                    },
+                    () =>
+                    {
+                        if (planetId == sourceId)
+                            return;
+                        if (_views.TryGetValue(planetId, out var view) && view != null)
+                            PlayPlanetDestroyEffect(view);
+                        DestroyPlanet(planetId, recordDestruction: true, causeStarDamage: false, grantDna: false);
+                    }));
+            }
+
+            if (_controller != null)
+            {
+                foreach (var star in _controller.Stars.Where(s => s != null).ToList())
+                {
+                    var targetStar = star;
+                    targets.Add(new DestroyRocketTarget(
+                        () => targetStar != null ? targetStar.transform.position : Vector3.zero,
+                        () =>
+                        {
+                            if (targetStar != null)
+                                _controller.DestroyStarFromDestroyProtocol(targetStar);
+                        }));
+                }
+            }
+
+            return targets;
+        }
+
+        private void WipeAllForDestroyProtocol()
+        {
+            foreach (var planet in _planets.Where(p => p.IsAlive).Select(p => p.Id).ToList())
+                DestroyPlanet(planet, recordDestruction: true, causeStarDamage: false, grantDna: false);
+
+            if (_controller == null)
+                return;
+
+            foreach (var star in _controller.Stars.Where(s => s != null).ToList())
+                _controller.DestroyStarFromDestroyProtocol(star);
+        }
+
+        private void LaunchDestroyRocket(Vector3 start, Vector3 end, Func<Vector3> getEndPosition,
+            Action<Vector3> onArrived)
+        {
+            EnsureDestroyRocketPool();
+            var rocket = _destroyRocketPool != null ? _destroyRocketPool.Rent() : null;
+            if (rocket == null)
+            {
+                onArrived?.Invoke(end);
+                return;
+            }
+
+            rocket.Launch(start, end, getEndPosition, Balance.civilization.destroyRocketSpeed, onArrived);
+        }
+
+        private readonly struct DestroyRocketTarget
+        {
+            public readonly Func<Vector3> GetPosition;
+            public readonly Action OnHit;
+
+            public DestroyRocketTarget(Func<Vector3> getPosition, Action onHit)
+            {
+                GetPosition = getPosition;
+                OnHit = onHit;
+            }
+        }
+
+        private void TryColonizeOnArrival(Planet source, Planet destination)
+        {
+            var balance = Balance.civilization;
+            if (balance == null || !balance.colonizationEnabled || source == null || destination == null ||
+                !destination.IsAlive)
+                return;
+
+            if (source.CivilizationStage < balance.colonizationMinimumSourceStage)
+                return;
+
+            if (destination.HasSpecies)
+                return;
+
+            if (balance.colonizationRequiresHabitable && !destination.IsHabitable)
+                return;
+
+            if (destination.Definition == null || !destination.Definition.canCivilize)
+                return;
+
+            if (UnityEngine.Random.value >= balance.GetColonizationChance(source))
+                return;
+
+            destination.InheritSpeciesFrom(source);
+            destination.ForceLifeStage(balance.colonizationTargetStage);
+            RecordLifeIfNeeded(destination);
+
+            if (_views.TryGetValue(destination.Id, out var view) && view != null)
+                view.RefreshVisual();
+
+            OnCivilizationEvent?.Invoke(
+                $"{source.SpeciesName} colonized {GetPlanetDisplayName(destination)} from {GetPlanetDisplayName(source)}.");
+            OnPlanetsChanged?.Invoke();
+            _controller?.NotifyStateChanged();
+            _controller?.SfxManager?.PlayLifeEmerged();
         }
 
         public string GetPlanetDisplayName(Planet planet)
@@ -646,9 +1122,11 @@ namespace Universes.Game
             if (planetCount <= 0)
                 return 0f;
 
-            var perPlanet = Balance.multiStar.basePlanetPassiveStardust +
-                            _controller.Upgrades.PlanetPassiveProductionLevel *
-                            Balance.multiStar.planetPassiveStardustPerUpgradeLevel;
+            var percentPerLevel = Balance.multiStar.planetPassiveProductionPercentPerLevel;
+            var percentMultiplier = Mathf.Pow(
+                1f + percentPerLevel,
+                _controller.Upgrades.PlanetPassiveProductionLevel);
+            var perPlanet = Balance.multiStar.basePlanetPassiveStardust * percentMultiplier;
             return Mathf.Max(0f, planetCount * perPlanet);
         }
 
@@ -663,7 +1141,7 @@ namespace Universes.Game
             return 1f + overloadCount * Balance.multiStar.planetOverloadAgeGainPerPlanet;
         }
 
-        private Vector3 GetPlanetWorldPosition(Planet planet)
+        public Vector3 GetPlanetWorldPosition(Planet planet)
         {
             if (_views.TryGetValue(planet.Id, out var view) && view != null)
                 return view.transform.position;
@@ -673,6 +1151,12 @@ namespace Universes.Game
                 return Vector3.zero;
 
             return hostStar.transform.position + GetOrbitOffset(planet);
+        }
+
+        public Vector3 GetPlanetWorldPosition(int planetId)
+        {
+            var planet = GetPlanetById(planetId);
+            return planet == null ? Vector3.zero : GetPlanetWorldPosition(planet);
         }
 
         private StarView GetHostStar(Planet planet) =>
@@ -715,6 +1199,85 @@ namespace Universes.Game
 
                 DestroyPlanet(planet.Id, causeStarDamage: false, grantDna: true);
             }
+        }
+
+        public void PullPlanetsTowardBlackHole(Vector3 holePosition, float pullRadius, float pullSpeed, float deltaTime)
+        {
+            if (pullRadius <= 0f || pullSpeed <= 0f || deltaTime <= 0f)
+                return;
+
+            foreach (var planet in _planets.Where(p => p.IsAlive).ToList())
+            {
+                if (!_views.TryGetValue(planet.Id, out var view) || view == null)
+                    continue;
+
+                view.PullToward(holePosition, pullRadius, pullSpeed, deltaTime);
+            }
+        }
+
+        public int ConsumePlanetsByBlackHole(Vector3 holePosition, float consumeRadius, float dnaPotentialReward)
+        {
+            if (consumeRadius <= 0f)
+                return 0;
+
+            var consumed = 0;
+            foreach (var planet in _planets.Where(p => p.IsAlive).ToList())
+            {
+                var position = GetPlanetWorldPosition(planet);
+                if (Vector3.Distance(position, holePosition) > consumeRadius)
+                    continue;
+
+                if (_views.TryGetValue(planet.Id, out var view) && view != null)
+                    PlayPlanetDestroyEffect(view);
+
+                DestroyPlanet(planet.Id, causeStarDamage: false, grantDna: true);
+                _controller?.TrySpawnDnaPotential(position, dnaPotentialReward);
+                consumed++;
+            }
+
+            if (consumed > 0)
+            {
+                OnPlanetsChanged?.Invoke();
+                _controller?.NotifyStateChanged();
+            }
+
+            return consumed;
+        }
+
+        public int DamagePlanetsInRadius(Vector3 origin, float radius, float damage, bool destroyUnstable,
+            bool grantDna, string eventMessage = null)
+        {
+            if (radius <= 0f || damage <= 0f)
+                return 0;
+
+            var affected = 0;
+            foreach (var planet in _planets.Where(p => p.IsAlive).ToList())
+            {
+                var position = GetPlanetWorldPosition(planet);
+                if (Vector3.Distance(position, origin) > radius)
+                    continue;
+
+                affected++;
+                var lethal = destroyUnstable && planet.Durability <= damage;
+                planet.Damage(lethal ? planet.MaxDurability : damage);
+
+                if (!planet.IsAlive)
+                {
+                    if (_views.TryGetValue(planet.Id, out var destroyedView) && destroyedView != null)
+                        PlayPlanetDestroyEffect(destroyedView);
+
+                    DestroyPlanet(planet.Id, causeStarDamage: false, grantDna: grantDna);
+                }
+                else if (_views.TryGetValue(planet.Id, out var damagedView) && damagedView != null)
+                {
+                    damagedView.RefreshVisual();
+                }
+            }
+
+            if (affected > 0 && !string.IsNullOrWhiteSpace(eventMessage))
+                OnCivilizationEvent?.Invoke(eventMessage);
+
+            return affected;
         }
 
         private void TickPlanetCollisions()

@@ -29,6 +29,11 @@ namespace Universes.Game
             "Concord", "Assembly", "Accord", "Collective", "Union", "Compact"
         };
 
+        private static readonly string[] SpaceProgramForms =
+        {
+            "Dawn Array", "Horizon Fleet", "Apex Rockets", "Starward Project", "Orbital Accord"
+        };
+
         private static readonly string[] StarPrefixes =
         {
             "Sol", "Aster", "Helio", "Cael", "Vey", "Oris", "Luma", "Siri", "Nara", "Eos"
@@ -58,6 +63,9 @@ namespace Universes.Game
 
         public static string GenerateCivilizationName(string speciesName) =>
             $"The {speciesName} {Pick(CivilizationForms)}";
+
+        public static string GenerateSpaceProgramName(string speciesName) =>
+            $"{speciesName} {Pick(SpaceProgramForms)}";
 
         public static string GenerateFlavor(string planetName, string speciesName) =>
             string.Format(Pick(FlavorTemplates), speciesName, planetName);

@@ -18,6 +18,8 @@ namespace Universes.Game
         [SerializeField] private Text tooltipText;
         [SerializeField] private Color enabledButtonColor = new(0.22f, 0.38f, 0.28f);
         [SerializeField] private Color disabledButtonColor = new(0.15f, 0.15f, 0.18f);
+        [SerializeField] private Color enabledIconColor = Color.white;
+        [SerializeField] private Color disabledIconColor = new(0.42f, 0.42f, 0.48f, 0.55f);
 
         private GameController _controller;
         private PrestigeState _prestige;
@@ -59,8 +61,6 @@ namespace Universes.Game
             if (descriptionText != null && !string.IsNullOrEmpty(definition.description))
                 descriptionText.text = definition.description;
 
-            RefreshIcon();
-
             if (buyButton != null)
             {
                 buyButton.onClick.RemoveAllListeners();
@@ -98,7 +98,12 @@ namespace Universes.Game
             if (titleText != null)
                 titleText.text = $"{definition.displayName} (Lv {level})";
 
-            RefreshIcon();
+            var canBuy = (_allowPurchase || (_controller != null && _controller.IsRunEnded)) &&
+                         unlocked &&
+                         !maxed &&
+                         _prestige.UniverseDna >= cost;
+
+            RefreshIcon(canBuy);
 
             if (descriptionText != null)
             {
@@ -115,10 +120,6 @@ namespace Universes.Game
 
             if (buyButton != null)
             {
-                var canBuy = (_allowPurchase || (_controller != null && _controller.IsRunEnded)) &&
-                             unlocked &&
-                             !maxed &&
-                             _prestige.UniverseDna >= cost;
                 buyButton.interactable = canBuy;
                 if (buttonImage != null)
                     buttonImage.color = canBuy ? enabledButtonColor : disabledButtonColor;
@@ -165,7 +166,7 @@ namespace Universes.Game
                    status;
         }
 
-        private void RefreshIcon()
+        private void RefreshIcon(bool canBuy)
         {
             if (iconImage == null || definition == null)
                 return;
@@ -173,6 +174,7 @@ namespace Universes.Game
             iconImage.sprite = definition.iconSprite;
             iconImage.enabled = definition.iconSprite != null;
             iconImage.preserveAspect = true;
+            iconImage.color = canBuy ? enabledIconColor : disabledIconColor;
         }
     }
 }

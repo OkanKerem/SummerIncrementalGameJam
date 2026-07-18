@@ -3096,7 +3096,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   starViewPrefab: {fileID: 7707097024590574272, guid: 9091889fb62ca8548bbe65af6cd056c2, type: 3}
-  blackHolePrefab: {fileID: 0}
+  blackHolePrefab: {fileID: 6120488712045812304, guid: c4a8f1e29d7b4560b3e6a0c8d5f2e791, type: 3}
   worldRoot: {fileID: 1900715547}
   floatingTextSpawner: {fileID: 411263562}
   particleManager: {fileID: 2130945834}

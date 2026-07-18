@@ -99,6 +99,9 @@ namespace Universes.Game
                 if (IsPointerOverUi())
                     return;
 
+                if (dragMouseButton == 1 && StarView.GetStarUnderMouse() != null)
+                    return;
+
                 _dragOrigin = GetMouseWorldPosition();
                 _dragging = true;
             }

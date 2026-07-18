@@ -14,10 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   upgradeType: 16
   upgradeTier: 2
-  displayName: Star Passive Production Percentage
-  description: Increases each star's passive Stardust production by a percentage.
-  baseCost: 140
-  costScale: 1.65
+  displayName: Passive Production Percent
+  iconSprite: {fileID: 0}
+  description: Multiplies Stardust gained from star passive production by a percentage
+    per level.
+  baseCost: 60
+  costScale: 1.75
   maxLevel: 15
-  upgradePrerequisites: []
+  upgradePrerequisites:
+  - upgradeType: 1
+    requiredLevel: 3
   statPrerequisites: []

@@ -45,6 +45,9 @@ namespace Universes.Game
 
         public void Show(bool manualCollapse)
         {
+            if (controller != null && controller.IsGameWon)
+                return;
+
             if (panelRoot != null)
                 panelRoot.SetActive(true);
 
@@ -53,6 +56,16 @@ namespace Universes.Game
                 titleText.text = manualCollapse
                     ? "Universe Collapsed — Legacy Preserved"
                     : "Universe Collapsed — Legacy Preserved";
+            }
+
+            if (titleText != null && controller != null &&
+                !string.IsNullOrWhiteSpace(controller.EndingTitle))
+            {
+                titleText.text = controller.EndingTitle;
+            }
+            else if (titleText != null && manualCollapse)
+            {
+                titleText.text = "Controlled Collapse";
             }
 
             if (summaryText != null && controller != null)
@@ -74,8 +87,12 @@ namespace Universes.Game
             var stats = controller.RunStats;
             var minutes = Mathf.FloorToInt(stats.SurvivalTimeSeconds / 60f);
             var seconds = Mathf.FloorToInt(stats.SurvivalTimeSeconds % 60f);
+            var endingText = !string.IsNullOrWhiteSpace(controller.EndingText)
+                ? controller.EndingText + "\n\n"
+                : string.Empty;
 
             return
+                endingText +
                 "Run Summary\n" +
                 $"Total Stardust Produced: {stats.TotalStardustProduced:0}\n" +
                 $"Stars Created: {stats.StarsCreated}\n" +
@@ -83,13 +100,13 @@ namespace Universes.Game
                 $"Star Collisions: {stats.StarCollisionCount}\n" +
                 $"Black Holes Created: {stats.BlackHolesCreated}\n" +
                 $"DNA Fragments Collected: {stats.DnaFragmentsCollected}\n" +
-                $"Black Hole DNA Potential: {stats.BlackHoleDnaPotential:0}\n" +
+                $"DNA Potential at collapse: {controller.DnaPotential:0}\n" +
                 $"Universe Lifetime: {minutes:00}:{seconds:00}\n" +
                 $"Final Entropy: {stats.FinalEntropy:0}%\n\n" +
                 "Universe DNA Earned\n" +
                 $"Base collapse reward: +{breakdown.BaseReward}\n" +
                 $"DNA Fragments: +{breakdown.FromDnaFragments}\n" +
-                $"Black Hole DNA potential: +{breakdown.FromBlackHolePotential}\n" +
+                $"DNA Potential: +{breakdown.FromDnaPotential}\n" +
                 $"Supernovas ({PrestigeBalance.SupernovasPerDnaPoint} each): +{breakdown.FromSupernovas}\n" +
                 $"Collisions ({PrestigeBalance.CollisionsPerDnaPoint} each): +{breakdown.FromCollisions}\n" +
                 $"Production ({PrestigeBalance.StardustPerDnaPoint:0} Stardust each): +{breakdown.FromProduction}\n" +

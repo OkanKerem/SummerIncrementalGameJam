@@ -15,8 +15,10 @@ MonoBehaviour:
   upgradeType: 18
   upgradeTier: 2
   displayName: Entropy Reduction
-  description: Reduces the rate at which entropy increases, making entropy progress more slowly.
-  baseCost: 180
+  iconSprite: {fileID: 0}
+  description: Reduces the rate at which entropy increases, making entropy progress
+    more slowly.
+  baseCost: 500
   costScale: 1.75
   maxLevel: 10
   upgradePrerequisites: []

@@ -15,12 +15,12 @@ MonoBehaviour:
   maxStarHealth: 100
   agePerClick: 1
   agePerPassiveTick: 1
-  passiveTickInterval: 1
+  passiveTickInterval: 0.5
   baseClickReward: 1
   basePassivePerSecond: 1
   createPlanetCost: 30
   createPlanetCostIncreasePercent: 15
-  baseMaxPlanets: 3
+  baseMaxPlanets: 1
   baseOrbitRadius: 1.5
   orbitRadiusStep: 1
   orbitSpeed: 28
@@ -34,11 +34,13 @@ MonoBehaviour:
   cameraDragEnabled: 1
   cameraDragMouseButton: 1
   cameraDragSpeed: 1
+  cameraZoomEnabled: 1
+  cameraZoomSpeed: 2
   autoFormationCheckInterval: 3
   baseAutoFormationChance: 0
   autoFormationChancePerLevel: 0.1
   civilizationTickInterval: 2.5
-  lifeProgressBase: 0.08
+  lifeProgressBase: 0.12
   baseHabitableRollBonus: 0.05
   habitableChancePerLevel: 0.06
   dnaTickInterval: 1
@@ -186,14 +188,14 @@ MonoBehaviour:
       stageDnaValue: 3.5
       stageClickBonusMultiplier: 1.25
       stageSelfDestructionRiskMultiplier: 2
-    spaceshipMinimumStage: 1
+    spaceshipMinimumStage: 2
     spaceshipPrefab: {fileID: 1275028092022314771, guid: 332c74886ca48d644959b0df97a15afb, type: 3}
     spaceshipSprites:
     - {fileID: 5708767266484348652, guid: 66b3ed61ca4b6274daad6964ed404afa, type: 3}
-    - {fileID: 6817236030902013017, guid: 66b3ed61ca4b6274daad6964ed404afa, type: 3}
-    - {fileID: 6693125099538430600, guid: 66b3ed61ca4b6274daad6964ed404afa, type: 3}
     - {fileID: 4145851471123462591, guid: 66b3ed61ca4b6274daad6964ed404afa, type: 3}
-    - {fileID: 540352951166331170, guid: f00c1c80d80175241995b5de9aeca690, type: 3}
+    - {fileID: -4496062058404129498, guid: f00c1c80d80175241995b5de9aeca690, type: 3}
+    - {fileID: -2062739136101940682, guid: f00c1c80d80175241995b5de9aeca690, type: 3}
+    - {fileID: 7410838841117647954, guid: f00c1c80d80175241995b5de9aeca690, type: 3}
     - {fileID: -3018096769890269484, guid: f00c1c80d80175241995b5de9aeca690, type: 3}
     - {fileID: 2012625530642147762, guid: f00c1c80d80175241995b5de9aeca690, type: 3}
     spaceshipAlienPortraitPrefab: {fileID: 1526657863573592418, guid: 8f76ea52db805154690875e13947dd21, type: 3}
@@ -201,27 +203,124 @@ MonoBehaviour:
     spaceshipSpeed: 2.5
     spaceshipDnaPotentialPerTrip: 1
     maxActiveSpaceships: 3
+    spaceStationMinimumStage: 3
+    spaceStationPrefab: {fileID: 2275028092022314772, guid: a4f8c2e1b7d639405162738495a6b8c9, type: 3}
+    spaceStationSprites:
+    - {fileID: 3834964548871529523, guid: 5c791b79c5a4abc4f957b643664e6027, type: 3}
+    - {fileID: 438667655155766238, guid: 5c791b79c5a4abc4f957b643664e6027, type: 3}
+    - {fileID: -4490321816599895915, guid: 5c791b79c5a4abc4f957b643664e6027, type: 3}
+    - {fileID: 6673857963896196786, guid: 5c791b79c5a4abc4f957b643664e6027, type: 3}
+    spaceStationSpawnInterval: 6
+    maxActiveSpaceStations: 2
+    spaceStationTravelSpeed: 2.5
+    spaceStationOrbitRadius: 0.2
+    spaceStationOrbitRadiusPlanetMultiplier: 2
+    spaceStationOrbitSpeed: 28
+    spaceStationDnaInterval: 3
+    spaceStationDnaPotentialPerTick: 0.75
+    colonizationEnabled: 1
+    colonizationMinimumSourceStage: 3
+    colonizationBaseChance: 0.25
+    colonizationIntelligenceBonus: 0.003
+    colonizationTargetStage: 1
+    colonizationRequiresHabitable: 1
+    destroyProtocolEnabled: 1
+    destroyRocketSpeed: 4
+    destroyRocketBarrageCount: 50
+    destroyRocketTravelDistance: 18
+    destroyProtocolCollapseDelay: 1.75
+  phase3:
+    enterPhase3WhenSpeciesReachesSpace: 0
+    maxStarSlots: 45
+    maxEntropy: 750
+    autoStarFormationEnabled: 1
+    autoStarFormationCheckInterval: 4
+    autoStarFormationChance: 0
+    autoStarFormationChancePerLevel: 0.08
+    spawnAreaMin: {x: -25, y: -15}
+    spawnAreaMax: {x: 25, y: 15}
+    minStarSeparation: 4
+    blackHoleLifetimeSeconds: 45
+    blackHoleEntropyPerSecond: 1
+    blackHoleDnaIntervalSeconds: 4
+    blackHoleDnaPotentialPerInterval: 1
+    blackHoleInitialDnaTimerMultiplier: 0.5
+    blackHoleDnaFragmentChance: 0.35
+    blackHoleParticlePullRadius: 2.5
+    blackHoleConsumeDnaChance: 0.15
+    blackHoleConsumedStardustMultiplier: 0.5
+    blackHoleGravityPullRadius: 2.5
+    blackHoleGravityPullSpeed: 1.35
+    blackHoleStarConsumeRadius: 0.42
+    blackHolePlanetConsumeRadius: 0.38
+    blackHolePlanetDamageRadius: 1.15
+    blackHolePlanetDamagePerSecond: 12
+    blackHoleStarAgeDamagePerSecond: 10
+    starDriftSpeed: 0.07
+    starCollisionDistance: 1
+    collisionStardustBurst: 80
+    collisionParticleBurst: 60
+    collisionAgeBonus: 8
+    collisionEntropy: 15
+    collisionDnaChance: 0.18
+    collisionBlackHoleChance: 0.12
+    collisionDnaPotential: 0
+    collisionPlanetDamageRadius: 2.5
+    collisionPlanetDamage: 65
+    supernovaParticleBurst: 120
+    supernovaRadius: 2.8
+    supernovaAgeBurst: 18
+    supernovaPlanetDamageRadius: 2.25
+    supernovaPlanetDamage: 45
+    supernovaDnaChance: 0.22
+    supernovaBlackHoleChance: 0.06
+    massiveParticleDnaChance: 0.1
+    spacePhaseDnaMultiplier: 1.6
+    hardSpaceDnaMultiplier: 3
+    spacePhasePlanetClickMultiplier: 1.1
+    hardSpacePlanetClickMultiplier: 1.25
+    hardSpaceProgressPerCivilizationTick: 0.35
+    hardSpaceCompletionRequirement: 5
+    hardSpaceRequiredDnaPotential: 25
+    hardSpaceRequiredIntelligence: 65
+    hardSpaceRequiresBlackHoleDiscovery: 0
+    endUniverseRequiredDnaPotential: 40
+    endUniverseRequiredEntropy: 35
+    endUniverseRequiresSpaceSpecies: 1
+    endUniverseRequiresBlackHoleDiscovery: 1
+    universeCollapseDuration: 3.5
+    universeCollapsePullSpeed: 7
+    universeCollapseSingularityScale: 3.5
   upgrades:
     clickPowerBaseIncrement: 1
     passiveProductionBaseIncrement: 1
-    supernovaBonusPerLevel: 15
+    supernovaBonusPerLevel: 1500
     clickRewardPercentPerLevel: 0.25
     starStabilityAgeGainReductionPerLevel: 0.25
     advancedStarStabilityAgeGainReductionPerLevel: 0.15
     baseClickCollectRadius: 1.1
     clickCollectRadiusPerLevel: 0.45
-    starPassiveProductionPercentPerLevel: 0.1
+    starPassiveProductionPercentPerLevel: 0.25
     collisionDnaPotentialPerLevel: 1
     entropyReductionPerLevel: 0.08
     speciesDnaPotentialPerLevel: 0.25
+    collisionAttractionDriftMultiplierPerLevel: 0.12
+    collisionAttractionDistancePerLevel: 0.08
+    blackHoleEntropyReductionPerLevel: 0.305
+    blackHoleMemoryDnaMultiplierPerLevel: 1
+    spaceAgeDnaMultiplierPerLevel: 0.2
+    spaceAgeProgressionMultiplierPerLevel: 0.2
+    cosmicEventDnaChancePerLevel: 0.684
+    orbitalDnaMultiplierPerLevel: 0.2
   multiStar:
     initialStarSlots: 1
-    maxStarSlots: 5
+    maxStarSlots: 10
+    maxEntropy: 100
     createStarBaseCost: 750
-    createStarCostScale: 1.65
-    createStarCostIncreasePercent: 65
+    createStarCostScale: 1.1
+    createStarCostIncreasePercent: 10
     supernovaStardustBonus: 5000
-    supernovaPlanetDestroyChance: 0.495
+    supernovaPlanetDestroyChance: 0.963
     supernovaPlanetDamage: 45
     supernovaNearbyStarRadius: 4
     supernovaNearbyStarAgeDamage: 18
@@ -230,11 +329,11 @@ MonoBehaviour:
     planetDeathEntropy: 1.5
     planetCollisionDistance: 0.45
     planetCollisionDnaPotential: 4
-    planetCollisionEntropy: 5
+    planetCollisionEntropy: 1.5
     planetOverloadAgeGainPerPlanet: 0.08
     planetCountBeforeOverload: 2
     basePlanetPassiveStardust: 1
-    planetPassiveStardustPerUpgradeLevel: 0.35
+    planetPassiveProductionPercentPerLevel: 0.5
     starClickValuePerPlanetPerUpgradeLevel: 0.5
     entropyPerActiveStarPerSecond: 0.015
     entropyPerPlanetPerSecond: 0.01
@@ -244,10 +343,16 @@ MonoBehaviour:
     phase2CameraZoomDuration: 1.25
     minZoom: 3
     phase1MaxZoom: 10
-    phase2MaxZoom: 10
-    phase3MaxZoom: 15
+    phase2MaxZoom: 15
+    phase3MaxZoom: 30
+    phase3CameraStartSize: 15
+    phase3CameraTargetSize: 22.5
+    phase3CameraZoomDuration: 1.25
     spawnAreaMin: {x: -15, y: -8}
     spawnAreaMax: {x: 15, y: 8}
     minStarSeparation: 4
+    constellationStarCount: 5
+    constellationRadius: 4
+    constellationJitter: 0.18
     starDriftSpeed: 0.1
     moveCentralStarInPhase2: 1

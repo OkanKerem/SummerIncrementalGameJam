@@ -15,11 +15,9 @@ MonoBehaviour:
   upgradeType: 1
   upgradeTier: 1
   displayName: Passive Production
-  description: More Stardust per second. Higher levels add bigger flat bonuses.
-  baseCost: 25
+  description: More Stardust per second from stars. Higher levels add bigger flat bonuses, like Click Power.
+  baseCost: 15
   costScale: 1.55
-  maxLevel: 20
-  upgradePrerequisites:
-  - upgradeType: 0
-    requiredLevel: 5
+  maxLevel: 25
+  upgradePrerequisites: []
   statPrerequisites: []
